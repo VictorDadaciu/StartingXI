@@ -68,7 +68,7 @@ namespace sxi
 			QuarterEdge* ptr = internal;
 			do
 			{
-				if (vec::sign(ptr->data->v, ptr->sym->data->v, point) > 0)
+				if (glm::sign(ptr->data->v, ptr->sym->data->v, point) > 0)
 				{
 					isInside = false;
 					break;

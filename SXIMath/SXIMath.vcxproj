@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="AABB.h" />
     <ClInclude Include="Line.h" />
+    <ClInclude Include="Mat.h" />
     <ClInclude Include="Vec.h" />
   </ItemGroup>
   <ItemGroup>
@@ -97,7 +98,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StringPooling>true</StringPooling>
-		<AdditionalIncludeDirectories>C:\code\StartingXI\ext\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\ext\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>

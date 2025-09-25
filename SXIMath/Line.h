@@ -14,11 +14,11 @@ namespace sxi
 		inline glm::vec2 mirror(const glm::vec2& point) const
 		{
 			glm::vec2 ab = end - start;
-			return point + 2.f * (start + ab * (glm::dot(ab, point - start) / vec::sqrLength(ab)) - point);
+			return point + 2.f * (start + ab * (glm::dot(ab, point - start) / glm::sqrLength(ab)) - point);
 		}
 
 		bool intersects(const Line&) const;
-		inline float sqrLength() const { return vec::sqrLength(end - start); }
+		inline float sqrLength() const { return glm::sqrLength(end - start); }
 
 		glm::vec2 start = SXI_VEC2_ZERO;
 		glm::vec2 end = SXI_VEC2_ZERO;
@@ -41,7 +41,7 @@ namespace sxi
 
 		inline glm::vec2 mirror(const glm::vec2 &point) const 
 		{
-			return point + 2.f * (origin + dir * (glm::dot(dir, point - origin) / vec::sqrLength(dir)) - point);
+			return point + 2.f * (origin + dir * (glm::dot(dir, point - origin) / glm::sqrLength(dir)) - point);
 		}
 
 		bool between(const Ray &, const Ray &) const;

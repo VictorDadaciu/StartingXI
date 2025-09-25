@@ -312,7 +312,7 @@ namespace sxi
 		std::vector<RSTNode> allChildren = mergeWithNewNode(branch->children, std::move(newNode));
 		branch->clear();
 		std::vector<RSTNodeLevelValue> nodesWithDists(allChildren.size());
-		std::transform(allChildren.cbegin(), allChildren.cend(), nodesWithDists.begin(), [level, center](const RSTNode& node) {return RSTNodeLevelValue(node, level, vec::sqrLength(node.aabb.center() - center)); });
+		std::transform(allChildren.cbegin(), allChildren.cend(), nodesWithDists.begin(), [level, center](const RSTNode& node) {return RSTNodeLevelValue(node, level, glm::sqrLength(node.aabb.center() - center)); });
 		// sort by distance to center of current parent aabb
 		std::sort(nodesWithDists.begin(), nodesWithDists.end());
 		// re-add closest children to current branch

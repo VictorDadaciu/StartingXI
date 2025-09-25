@@ -9,6 +9,7 @@
 #include "Renderer.h"
 #include "Window.h"
 #include "File.h"
+#include "Timing.h"
 
 static sxi::Window* window{};
 static sxi::Renderer* renderer{};
@@ -46,6 +47,7 @@ static void initialize()
 
 static void loop()
 {
+	sxi::Time time{};
 	SDL_Event e;
 	SDL_zero(e);
 	bool minimized = false;
@@ -70,7 +72,9 @@ static void loop()
 			}
 		}
 		if (!minimized)
-			renderer->render();
+			renderer->render(time);
+
+		time.refresh();
 	}
 }
 

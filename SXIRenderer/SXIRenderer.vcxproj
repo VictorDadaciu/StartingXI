@@ -72,13 +72,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>
-		  C:\code\StartingXI\SXIMath;
-		  C:\code\StartingXI\ext\glm;
-		  C:\code\StartingXI\ext\SDL3-3.2.16\include;
-		  C:\VulkanSDK\1.4.321.1\Include;
-		  %(AdditionalIncludeDirectories)
-	  </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\ext\glm;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -87,7 +81,7 @@
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>C:\code\StartingXI\ext\SDL3-3.2.16\lib\x64;C:\VulkanSDK\1.4.321.1\Lib;C:\code\StartingXI\x64\Debug</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;SDL3.lib;SXIMath.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;SDL3.lib;SXIMath.lib;SXICore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -107,13 +101,7 @@
       <StringPooling>true</StringPooling>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>true</FloatingPointExceptions>
-	  <AdditionalIncludeDirectories>
-	  	  C:\code\StartingXI\SXIMath;
-	  	  C:\code\StartingXI\ext\glm;
-	  	  C:\code\StartingXI\ext\SDL3-3.2.16\include;
-	  	  C:\VulkanSDK\1.4.321.1\Include;
-	  	  %(AdditionalIncludeDirectories)
-	  </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\ext\glm;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -123,7 +111,7 @@
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>C:\code\StartingXI\ext\SDL3-3.2.16\lib\x64;C:\VulkanSDK\1.4.321.1\Lib;C:\code\StartingXI\x64\Release</AdditionalLibraryDirectories>
-      <AdditionalDependencies>vulkan-1.lib;SDL3.lib;SXIMath.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;SDL3.lib;SXIMath.lib;SXICore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

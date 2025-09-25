@@ -32,11 +32,11 @@ namespace sxi
     {
         glm::vec2 v = end - start;
         glm::vec2 u = point - start;
-        float t = glm::dot(v, u) / vec::sqrLength(v);
+        float t = glm::dot(v, u) / glm::sqrLength(v);
         if (t >= 0 && t <= 1)
-            return vec::sqrLength((start * (1 - t) + end * t) - point);
-        float dStart = vec::sqrLength(u);
-        float dEnd = vec::sqrLength(end - point);
+            return glm::sqrLength((start * (1 - t) + end * t) - point);
+        float dStart = glm::sqrLength(u);
+        float dEnd = glm::sqrLength(end - point);
         return fminf(dStart, dEnd);
     }
 
@@ -44,17 +44,17 @@ namespace sxi
     {
         glm::vec2 line = end - start;
         glm::vec2 fromStart = point - start;
-        float t = glm::dot(line, fromStart) / vec::sqrLength(line);
+        float t = glm::dot(line, fromStart) / glm::sqrLength(line);
         if (t >= 0 && t <= 1)
         {
             glm::vec2 toNewPoint = 1.01f * (start * (1 - t) + end * t - point);
-            sqrDist = vec::sqrLength(toNewPoint);
+            sqrDist = glm::sqrLength(toNewPoint);
             return point + toNewPoint;
         }
         glm::vec2 toStart = -1.01f * fromStart;
         glm::vec2 toEnd = 1.01f * (end - point);
-        float dStart = vec::sqrLength(toStart);
-        float dEnd = vec::sqrLength(toEnd);
+        float dStart = glm::sqrLength(toStart);
+        float dEnd = glm::sqrLength(toEnd);
         sqrDist = fminf(dStart, dEnd);
         return point + (dStart < dEnd ? toStart : toEnd);
     }
@@ -67,7 +67,7 @@ namespace sxi
         glm::vec2 v2 = line.end - line.start;
         glm::vec2 v3(-dir.y, dir.x);
         float dot = glm::dot(v2, v3);
-        float t1 = vec::cross(v1, v1) / dot;
+        float t1 = glm::cross(v1, v1) / dot;
         float t2 = glm::dot(v1, v3) / dot;
         point = line.start + v2 * t2;
         return t1 >= 0 && 0 <= t1 && t1 <= 1;
@@ -75,6 +75,6 @@ namespace sxi
 
     bool Ray::between(const Ray &left, const Ray &right) const 
     {
-        return vec::cross(left.dir, dir) * vec::cross(right.dir, dir) <= 0;
+        return glm::cross(left.dir, dir) * glm::cross(right.dir, dir) <= 0;
     }
 }

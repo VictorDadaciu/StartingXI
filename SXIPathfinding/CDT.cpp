@@ -119,7 +119,7 @@ namespace sxi
 				int right = (i + 1) % polygon.size();
 				glm::vec2 b = polygon[right]->data->v - polygon[i]->data->v;
 				radii[i] = std::numeric_limits<float>::max();
-				if (vec::cross(b, a) > 0)
+				if (glm::cross(b, a) > 0)
 					radii[i] = radiusOfTriangle(polygon[left]->data->v, polygon[i]->data->v, polygon[right]->data->v);
 				left = i;
 				a = b;
@@ -162,9 +162,9 @@ namespace sxi
 			glm::vec2 c = polygon[right]->data->v - polygon[midRight]->data->v;
 			radii[midLeft] = std::numeric_limits<float>::max();
 			radii[midRight] = std::numeric_limits<float>::max();
-			if (vec::cross(b, a) > 0)
+			if (glm::cross(b, a) > 0)
 				radii[midLeft] = radiusOfTriangle(polygon[left]->data->v, polygon[midLeft]->data->v, polygon[midRight]->data->v);
-			if (vec::cross(c, b) > 0)
+			if (glm::cross(c, b) > 0)
 				radii[midRight] = radiusOfTriangle(polygon[midLeft]->data->v, polygon[midRight]->data->v, polygon[right]->data->v);
 		}
 		// cull all affected edges
@@ -407,7 +407,7 @@ namespace sxi
 		glm::vec2 a = ptr->sym->data->v - ptr->data->v; 
 		QuarterEdge* lNext = ptr->sym->prev;
 		glm::vec2 b = lNext->sym->data->v - lNext->data->v;
-		float prev = vec::cross(b, a);
+		float prev = glm::cross(b, a);
 		a = b;
 		do
 		{
@@ -416,7 +416,7 @@ namespace sxi
 			if (lNext == edge || lNext == edge->sym)
 				lNext = lNext->prev;
 			b = lNext->sym->data->v - lNext->data->v;
-			float curr = vec::cross(b, a);
+			float curr = glm::cross(b, a);
 			a = b;
 			if (curr != 0)
 			{
@@ -448,7 +448,7 @@ namespace sxi
 			ptr = lNext;
 
 			glm::vec2 b = ptr->sym->data->v - ptr->data->v;
-			if (vec::cross(a, b) > 0)
+			if (glm::cross(a, b) > 0)
 				return false;
 			a = b;
 		} while (ptr != start);
@@ -632,7 +632,7 @@ namespace sxi
 		QuarterEdge* ptr = current;
 		do
 		{
-			if (vec::sign(ptr->data->v, ptr->sym->data->v, point) > 0)
+			if (glm::sign(ptr->data->v, ptr->sym->data->v, point) > 0)
 				ptr = ptr->prev;
 			else
 				break;
@@ -643,7 +643,7 @@ namespace sxi
 		// find polyogn
 		do
 		{
-			if (vec::sign(ptr->data->v, ptr->sym->data->v, point) > 0) // go to next 
+			if (glm::sign(ptr->data->v, ptr->sym->data->v, point) > 0) // go to next 
 			{
 				current = ptr->prev;
 				ptr = current;
@@ -669,7 +669,7 @@ namespace sxi
 		QuarterEdge* ptr = current;
 		do
 		{
-			if (vec::sign(ptr->data->v, ptr->sym->data->v, point) > 0)
+			if (glm::sign(ptr->data->v, ptr->sym->data->v, point) > 0)
 				ptr = ptr->prevOn();
 			else
 				break;
@@ -680,7 +680,7 @@ namespace sxi
 		// find polyogn
 		do
 		{
-			if (vec::sign(ptr->data->v, ptr->sym->data->v, point) > 0) // go to next 
+			if (glm::sign(ptr->data->v, ptr->sym->data->v, point) > 0) // go to next 
 			{
 				current = ptr->prevOn();
 				ptr = current;

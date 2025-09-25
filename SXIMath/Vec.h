@@ -5,27 +5,30 @@
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 
-#define SXI_VEC2_ZERO glm::vec2(0.f)
-#define SXI_VEC2_MIN  glm::vec2(std::numeric_limits<float>::min())
-#define SXI_VEC2_MAX  glm::vec2(std::numeric_limits<float>::max())
+#define SXI_VEC2_ZERO  glm::vec2(0.f)
+#define SXI_VEC2_MIN   glm::vec2(std::numeric_limits<float>::min())
+#define SXI_VEC2_MAX   glm::vec2(std::numeric_limits<float>::max())
 
-#define SXI_VEC3_ZERO glm::vec3(0.f)
-#define SXI_VEC3_MIN  glm::vec3(std::numeric_limits<float>::min())
-#define SXI_VEC3_MAX  glm::vec3(std::numeric_limits<float>::max())
+#define SXI_VEC3_ZERO  glm::vec3(0.f)
+#define SXI_VEC3_MIN   glm::vec3(std::numeric_limits<float>::min())
+#define SXI_VEC3_MAX   glm::vec3(std::numeric_limits<float>::max())
+#define SXI_VEC3_UP    glm::vec3(0.f, 1.f, 0.f)
+#define SXI_VEC3_DOWN  glm::vec3(0.f, -1.f, 0.f)
+#define SXI_VEC3_LEFT  glm::vec3(-1.f, 0.f, 0.f)
+#define SXI_VEC3_RIGHT glm::vec3(1.f, 0.f, 0.f)
+#define SXI_VEC3_FWD   glm::vec3(0.f, 0.f, 1.f)
+#define SXI_VEC3_BWD   glm::vec3(0.f, 0.f, -1.f)
 
-namespace sxi 
+namespace glm 
 {
-	namespace vec
+	inline float sqrLength(const glm::vec2& vec) { return glm::dot(vec, vec); }
+	inline float sqrLength(const glm::vec3& vec) { return glm::dot(vec, vec); }
+
+	inline float cross(const glm::vec2& a, const glm::vec2& b) { return a.x * b.y - b.x * a.y; }
+
+	inline float sign(const glm::vec2& from, const glm::vec2& to, const glm::vec2& point)
 	{
-		inline float sqrLength(const glm::vec2& vec) { return glm::dot(vec, vec); }
-		inline float sqrLength(const glm::vec3& vec) { return glm::dot(vec, vec); }
-
-		inline float cross(const glm::vec2& a, const glm::vec2& b) { return a.x * b.y - b.x * a.y; }
-
-		inline float sign(const glm::vec2& from, const glm::vec2& to, const glm::vec2& point)
-		{
-			return (to.x - from.x) * (point.y - from.y) - (to.y - from.y) * (point.x - from.x);
-		}
+		return (to.x - from.x) * (point.y - from.y) - (to.y - from.y) * (point.x - from.x);
 	}
 }
 

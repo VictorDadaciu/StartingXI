@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <array>
 
+#include "Vec.h"
+
 static VkDebugUtilsMessengerEXT debugMessenger{};
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -89,9 +91,14 @@ namespace sxi
 	};
 
 	const static std::vector<Vertex> verts = {
-		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+	};
+
+	const static std::vector<uint16_t> indices = {
+		0, 1, 2, 2, 3, 0
 	};
 
 	static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
@@ -161,6 +168,20 @@ namespace sxi
 
 		cleanupSwapChain();
 
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
+		{
+			vkDestroyBuffer(logicalDevice, uniformBuffers[i], nullptr);
+			vkFreeMemory(logicalDevice, uniformBuffersMem[i], nullptr);
+		}
+
+		vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+
+		vkDestroyDescriptorSetLayout(logicalDevice, descriptorSetLayout, nullptr);
+
+		vkDestroyBuffer(logicalDevice, indexBuffer, nullptr);
+
+		vkFreeMemory(logicalDevice, indexBufferMem, nullptr);
+
 		vkDestroyBuffer(logicalDevice, vertexBuffer, nullptr);
 
 		vkFreeMemory(logicalDevice, vertexBufferMem, nullptr);
@@ -204,10 +225,15 @@ namespace sxi
 		createSwapChain();
 		createImageViews();
 		createRenderPass();
+		createDescriptorSetLayout();
 		createGraphicsPipeline(std::move(vertCode), std::move(fragCode));
 		createFrameBuffers();
 		createCommandPool();
 		createVertexBuffer();
+		createIndexBuffer();
+		createUniformBuffers();
+		createDescriptorPool();
+		createDescriptorSets();
 		createCommandBuffer();
 		createSyncObjects();
 
@@ -596,6 +622,24 @@ namespace sxi
 			throw std::exception("Failed to create render pass");
 	}
 
+	void Renderer::createDescriptorSetLayout()
+	{
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+
+		if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+			throw std::exception("Failed to create descriptor set layout");
+	}
+
 	void Renderer::createGraphicsPipeline(std::vector<char>&& vertCode, std::vector<char>&& fragCode)
 	{
 		VkShaderModule vertModule = createShaderModule(std::move(vertCode));
@@ -651,8 +695,8 @@ namespace sxi
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.cullMode = VK_CULL_MODE_NONE;
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
 		rasterizer.depthBiasClamp = 0.0f;
@@ -690,10 +734,10 @@ namespace sxi
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
 		if (vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 			throw std::exception("Failed to create pipeline layout");
@@ -783,34 +827,173 @@ namespace sxi
 		throw std::exception("Failed to find suitable memory type");
 	}
 
-	void Renderer::createVertexBuffer()
+	void Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memProperties, VkBuffer& buffer, VkDeviceMemory& mem)
 	{
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = sizeof(verts[0]) * verts.size();
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.size = size;
+		bufferInfo.usage = usage;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS)
-			throw std::exception("Failed to create vertex buffer");
+		if (vkCreateBuffer(logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS)
+			throw std::exception("Failed to create buffer");
 
 		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(logicalDevice, vertexBuffer, &memRequirements);
+		vkGetBufferMemoryRequirements(logicalDevice, buffer, &memRequirements);
 
 		VkMemoryAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, memProperties);
 
-		if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &vertexBufferMem) != VK_SUCCESS)
-			throw std::exception("Failed to allocate vertex buffer memory");
+		if (vkAllocateMemory(logicalDevice, &allocInfo, nullptr, &mem) != VK_SUCCESS)
+			throw std::exception("failed to allocate buffer memory!");
 
-		vkBindBufferMemory(logicalDevice, vertexBuffer, vertexBufferMem, 0);
+		vkBindBufferMemory(logicalDevice, buffer, mem, 0);
+	}
+
+	void Renderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) const
+	{
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandPool = commandPool;
+		allocInfo.commandBufferCount = 1;
+
+		VkCommandBuffer commandBuffer;
+		vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer);
+
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+		VkBufferCopy copyRegion{};
+		copyRegion.srcOffset = 0; // Optional
+		copyRegion.dstOffset = 0; // Optional
+		copyRegion.size = size;
+		vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+		vkEndCommandBuffer(commandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(graphicsQueue);
+
+		vkFreeCommandBuffers(logicalDevice, commandPool, 1, &commandBuffer);
+	}
+
+	void Renderer::createVertexBuffer()
+	{
+		VkDeviceSize bufferSize = sizeof(verts[0]) * verts.size();
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMem;
+		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMem);
 
 		void* data;
-		vkMapMemory(logicalDevice, vertexBufferMem, 0, bufferInfo.size, 0, &data);
-		memcpy(data, verts.data(), (size_t)bufferInfo.size);
-		vkUnmapMemory(logicalDevice, vertexBufferMem);
+		vkMapMemory(logicalDevice, stagingBufferMem, 0, bufferSize, 0, &data);
+		memcpy(data, verts.data(), (size_t)bufferSize);
+		vkUnmapMemory(logicalDevice, stagingBufferMem);
+
+		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMem);
+
+		copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+		vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
+		vkFreeMemory(logicalDevice, stagingBufferMem, nullptr);
+	}
+
+	void Renderer::createIndexBuffer()
+	{
+		VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMem;
+		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMem);
+
+		void* data;
+		vkMapMemory(logicalDevice, stagingBufferMem, 0, bufferSize, 0, &data);
+		memcpy(data, indices.data(), (size_t)bufferSize);
+		vkUnmapMemory(logicalDevice, stagingBufferMem);
+
+		createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMem);
+
+		copyBuffer(stagingBuffer, indexBuffer, bufferSize);
+
+		vkDestroyBuffer(logicalDevice, stagingBuffer, nullptr);
+		vkFreeMemory(logicalDevice, stagingBufferMem, nullptr);
+	}
+
+	void Renderer::createUniformBuffers()
+	{
+		VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+
+		uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+		uniformBuffersMem.resize(MAX_FRAMES_IN_FLIGHT);
+		uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMem[i]);
+
+			vkMapMemory(logicalDevice, uniformBuffersMem[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
+		}
+	}
+
+	void Renderer::createDescriptorPool()
+	{
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+		if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+			throw std::exception("Failed to create descriptor pool");
+	}
+
+	void Renderer::createDescriptorSets()
+	{
+		std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		allocInfo.pSetLayouts = layouts.data();
+
+		descriptorSets.resize(MAX_FRAMES_IN_FLIGHT);
+		if (vkAllocateDescriptorSets(logicalDevice, &allocInfo, descriptorSets.data()) != VK_SUCCESS)
+			throw std::runtime_error("Failed to allocate descriptor sets");
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+		{
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = uniformBuffers[i];
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(UniformBufferObject);
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSets[i];
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr; // Optional
+			descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+			vkUpdateDescriptorSets(logicalDevice, 1, &descriptorWrite, 0, nullptr);
+		}
 	}
 
 	void Renderer::createCommandBuffer()
@@ -827,7 +1010,7 @@ namespace sxi
 			throw std::exception("Failed to allocate command buffers");
 	}
 
-	void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+	void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, uint32_t currentFrame)
 	{
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -868,7 +1051,11 @@ namespace sxi
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-		vkCmdDraw(commandBuffer, static_cast<uint32_t>(verts.size()), 1, 0, 0);
+		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
+
+		vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
 
@@ -898,8 +1085,22 @@ namespace sxi
 				vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
 				throw std::exception("Failed to create fences");
 	}
+	
+	void Renderer::updateUniformBuffers(const Time& time, uint32_t currentFrame)
+	{
+		static TimePoint start = time.time;
+		float timePassed = Time::elapsed(time.time, start);
 
-	void Renderer::render()
+		UniformBufferObject ubo{};
+		ubo.model =  glm::rotate(glm::translate(glm::mat4(1.f), 0.5f * SXI_VEC3_UP * std::sinf(timePassed)), timePassed * glm::radians(60.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		ubo.view = glm::lookAt(glm::vec3(3.0f, 0.5f, 3.0f), SXI_VEC3_ZERO, SXI_VEC3_UP);
+		ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
+		ubo.proj[1][1] *= -1;
+
+		memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+	}
+
+	void Renderer::render(const Time& time)
 	{
 		static uint32_t currentFrame = 0;
 
@@ -918,10 +1119,12 @@ namespace sxi
 			throw std::exception("Failed to acquire swap chain image");
 		}
 
+		updateUniformBuffers(time, currentFrame);
+
 		vkResetFences(logicalDevice, 1, &inFlightFences[currentFrame]);
 
 		vkResetCommandBuffer(commandBuffers[currentFrame], 0);
-		recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+		recordCommandBuffer(commandBuffers[currentFrame], imageIndex, currentFrame);
 
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

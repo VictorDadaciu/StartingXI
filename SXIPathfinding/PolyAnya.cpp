@@ -131,10 +131,10 @@ namespace sxi
 				{
 					glm::vec2 dataRoot = ptr->data->v - node.root; // root -> beginning of edge
 					glm::vec2 symRoot = ptr->sym->data->v - node.root; // root -> end of edge
-					float dataCrossA = vec::cross(dataRoot, rayA.dir);
-					float dataCrossB = vec::cross(dataRoot, rayB.dir);
-					float symCrossA = vec::cross(symRoot, rayA.dir);
-					float symCrossB = vec::cross(symRoot, rayB.dir);
+					float dataCrossA = glm::cross(dataRoot, rayA.dir);
+					float dataCrossB = glm::cross(dataRoot, rayB.dir);
+					float symCrossA = glm::cross(symRoot, rayA.dir);
+					float symCrossB = glm::cross(symRoot, rayB.dir);
 					bool dataLeftOfCone = dataCrossA < 0;
 					bool dataOnLeft = dataCrossA == 0;
 					bool symLeftOfCone = symCrossA < 0;
