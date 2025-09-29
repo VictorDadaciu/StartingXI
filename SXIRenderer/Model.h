@@ -44,6 +44,8 @@ namespace sxi
 			attributeDescs[2].offset = offsetof(Vertex, uv);
 			return attributeDescs;
 		}
+
+		inline bool operator==(const Vertex& other) const { return pos == other.pos && col == other.col && uv == other.uv; }
 	};
 
 	class Model
@@ -65,6 +67,19 @@ namespace sxi
 		std::vector<Vertex> verts{};
 		std::vector<u32> indis{};
 		Texture* tex{};
+	};
+}
+
+namespace std
+{
+	template<> struct hash<sxi::Vertex>
+	{
+		size_t operator()(const sxi::Vertex& vertex) const
+		{
+			return ((hash<glm::vec3>()(vertex.pos) ^
+					 (hash<glm::vec3>()(vertex.col) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.uv) << 1);
+		}
 	};
 }
 

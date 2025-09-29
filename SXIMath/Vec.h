@@ -5,6 +5,9 @@
 #include <glm/geometric.hpp>
 #include <glm/common.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/hash.hpp"
+
 #define SXI_VEC2_ZERO  glm::vec2(0.f)
 #define SXI_VEC2_MIN   glm::vec2(std::numeric_limits<float>::min())
 #define SXI_VEC2_MAX   glm::vec2(std::numeric_limits<float>::max())
@@ -31,27 +34,4 @@ namespace glm
 		return (to.x - from.x) * (point.y - from.y) - (to.y - from.y) * (point.x - from.x);
 	}
 }
-
-template <>
-struct std::hash<glm::vec2>
-{
-	std::size_t operator()(const glm::vec2& v) const
-	{
-		std::size_t h1 = std::hash<float>{}(v.x);
-		std::size_t h2 = std::hash<float>{}(v.y);
-		return h1 ^ (h2 << 1);
-	}
-};
-
-template <>
-struct std::hash<glm::vec3>
-{
-	std::size_t operator()(const glm::vec3& v) const
-	{
-		std::size_t h1 = std::hash<float>{}(v.x);
-		std::size_t h2 = std::hash<float>{}(v.y);
-		std::size_t h3 = std::hash<float>{}(v.z);
-		return h1 ^ (h2 << 1) ^ (h3 << 2);
-	}
-};
 

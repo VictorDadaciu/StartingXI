@@ -2,7 +2,9 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
+
 #include <exception>
+#include <unordered_map>
 
 #include "Texture.h"
 
@@ -17,6 +19,8 @@ namespace sxi
 
         if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str()))
             throw std::exception(err.c_str());
+
+        std::unordered_map<Vertex, u32> uniqueVerts{};
 
         for (const auto& shape : shapes)
         {
@@ -37,8 +41,13 @@ namespace sxi
 
                 vertex.col = {1.0f, 1.0f, 1.0f};
 
-                verts.push_back(std::move(vertex));
-                indis.push_back(indis.size());
+                if (uniqueVerts.count(vertex) == 0)
+                {
+                    uniqueVerts[vertex] = SXI_TO_U32(verts.size());
+                    verts.push_back(std::move(vertex));
+                }
+
+                indis.push_back(uniqueVerts[vertex]);
             }
         }
 	}
