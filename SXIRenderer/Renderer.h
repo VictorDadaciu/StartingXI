@@ -60,6 +60,7 @@ namespace sxi
 		void createGraphicsPipeline(std::vector<char>&&, std::vector<char>&&);
 		void createFrameBuffers();
 		void createCommandPool();
+		void createColorResources();
 		void createDepthResources();
 		void createTextureImage();
 		void createTextureImageView();
@@ -77,8 +78,8 @@ namespace sxi
 		void recreateSwapChain();
 		void cleanupSwapChain() const;
 
-		QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice device) const;
-		int physicalDeviceScore(const VkPhysicalDevice device) const;
+		QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice) const;
+		int physicalDeviceScore(const VkPhysicalDevice) const;
 		SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice) const;
 		VkSurfaceFormatKHR chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&) const;
 		VkPresentModeKHR chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>&) const;
@@ -87,12 +88,14 @@ namespace sxi
 		u32 findMemoryType(u32, VkMemoryPropertyFlags) const;
 		void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
 		void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize) const;
-		void createImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
-		VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags) const;
-		void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout);
+		void createImage(u32, u32, u32, VkSampleCountFlagBits, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage&, VkDeviceMemory&);
+		VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags, u32) const;
+		void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout, u32);
 		void copyBufferToImage(VkBuffer, VkImage, u32, u32);
 		VkFormat findSupportedFormat(const std::vector<VkFormat>&, VkImageTiling, VkFormatFeatureFlags) const;
 		VkFormat findDepthFormat() const;
+		void generateMipmaps(VkImage, VkFormat, i32, i32, u32);
+		VkSampleCountFlagBits getMaxUsableSampleCount() const;
 
 		VkCommandBuffer beginSingleTimeCommands() const;
 		void endSingleTimeCommands(VkCommandBuffer) const;
@@ -123,6 +126,9 @@ namespace sxi
 		VkDeviceMemory textureImageMem;
 		VkImageView textureImageView;
 		VkSampler textureSampler;
+		VkImage colorImage;
+		VkDeviceMemory colorImageMem;
+		VkImageView colorImageView;
 		VkImage depthImage;
 		VkDeviceMemory depthImageMem;
 		VkImageView depthImageView;
@@ -134,6 +140,7 @@ namespace sxi
 		std::vector<VkSemaphore> imageAvailableSemaphores{};
 		std::vector<VkSemaphore> renderFinishedSemaphores{};
 		std::vector<VkFence> inFlightFences{};
+		VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
 		VkQueue graphicsQueue{};
 		VkQueue presentQueue{};

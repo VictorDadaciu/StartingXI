@@ -18,17 +18,19 @@ namespace sxi
 		~Texture();
 
 		inline unsigned char* raw() const { return data; }
-		inline u64 getSize() const { return size; }
-		inline int getWidth() const { return width; }
-		inline int getHeight() const { return height; }
-		inline int getChannels() const { return channels; }
+		inline u64 size() const { return m_size; }
+		inline int width() const { return m_width; }
+		inline int height() const { return m_height; }
+		inline int channels() const { return m_channels; }
+		inline u32 mipLevels() const { return m_mipLevels; }
 
 	private:
 		unsigned char* data{};
-		u64 size;
-		int width{};
-		int height{};
-		int channels{};
+		u64 m_size;
+		int m_width{};
+		int m_height{};
+		int m_channels{};
+		u32 m_mipLevels{};
 	};
 }
 
