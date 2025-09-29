@@ -6,13 +6,14 @@
 #include "Vec.h"
 #include "Mat.h"
 #include "Timing.h"
+#include "Types.h"
 
 namespace sxi
 {
 	struct QueueFamilyIndices
 	{
-		std::optional<uint32_t> graphicsFamily;
-		std::optional<uint32_t> presentFamily;
+		std::optional<u32> graphicsFamily;
+		std::optional<u32> presentFamily;
 
 		inline bool isComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
 	};
@@ -30,13 +31,14 @@ namespace sxi
 		alignas(16) glm::mat4 proj;
 	};
 
+	class Model;
 	class Window;
 	class Renderer
 	{
 	public:
 		Renderer(std::vector<const char*>&& extensions);
 	
-		void initialize(Window*, std::vector<char>&&, std::vector<char>&&);
+		void initialize(Window*, std::vector<char>&&, std::vector<char>&&, Model*);
 		inline const VkInstance vkInstance() const { return instance; }
 		void render(const Time&);
 		void cleanup() const;
@@ -58,6 +60,10 @@ namespace sxi
 		void createGraphicsPipeline(std::vector<char>&&, std::vector<char>&&);
 		void createFrameBuffers();
 		void createCommandPool();
+		void createDepthResources();
+		void createTextureImage();
+		void createTextureImageView();
+		void createTextureImageSampler();
 		void createVertexBuffer();
 		void createIndexBuffer();
 		void createUniformBuffers();
@@ -66,8 +72,8 @@ namespace sxi
 		void createCommandBuffer();
 		void createSyncObjects();
 
-		void updateUniformBuffers(const Time&, uint32_t);
-		void recordCommandBuffer(VkCommandBuffer, uint32_t, uint32_t);
+		void updateUniformBuffers(const Time&, u32);
+		void recordCommandBuffer(VkCommandBuffer, u32, u32);
 		void recreateSwapChain();
 		void cleanupSwapChain() const;
 
@@ -78,9 +84,18 @@ namespace sxi
 		VkPresentModeKHR chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>&) const;
 		VkExtent2D chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR&) const;
 		VkShaderModule createShaderModule(std::vector<char>&&) const;
-		uint32_t findMemoryType(uint32_t, VkMemoryPropertyFlags) const;
+		u32 findMemoryType(u32, VkMemoryPropertyFlags) const;
 		void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
 		void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize) const;
+		void createImage(u32 width, u32 height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+		VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags) const;
+		void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout);
+		void copyBufferToImage(VkBuffer, VkImage, u32, u32);
+		VkFormat findSupportedFormat(const std::vector<VkFormat>&, VkImageTiling, VkFormatFeatureFlags) const;
+		VkFormat findDepthFormat() const;
+
+		VkCommandBuffer beginSingleTimeCommands() const;
+		void endSingleTimeCommands(VkCommandBuffer) const;
 	
 		Window* window = nullptr;
 
@@ -104,6 +119,13 @@ namespace sxi
 		VkPipeline graphicsPipeline{};
 		std::vector<VkFramebuffer> swapChainFrameBuffers{};
 		VkCommandPool commandPool{};
+		VkImage textureImage;
+		VkDeviceMemory textureImageMem;
+		VkImageView textureImageView;
+		VkSampler textureSampler;
+		VkImage depthImage;
+		VkDeviceMemory depthImageMem;
+		VkImageView depthImageView;
 		VkBuffer vertexBuffer{};
 		VkDeviceMemory vertexBufferMem{};
 		VkBuffer indexBuffer{};
@@ -115,6 +137,8 @@ namespace sxi
 
 		VkQueue graphicsQueue{};
 		VkQueue presentQueue{};
+
+		Model* model;
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		bool initialized = false;

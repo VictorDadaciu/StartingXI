@@ -10,16 +10,24 @@
 #include "Window.h"
 #include "File.h"
 #include "Timing.h"
+#include "Model.h"
+
+const std::string MODELS_PATH = "C:/code/StartingXI/MysteriousGame/models/";
+const std::string TEXTURES_PATH = "C:/code/StartingXI/MysteriousGame/textures/";
+const std::string SHADERS_PATH = "C:/code/StartingXI/MysteriousGame/shaders/";
+const std::string SHADERS_GEN_PATH = "C:/code/StartingXI/MysteriousGame/shaders/generated/";
 
 static sxi::Window* window{};
 static sxi::Renderer* renderer{};
+static sxi::Texture texture(TEXTURES_PATH + "viking_room.png");
+static sxi::Model model(MODELS_PATH + "viking_room.obj", &texture);
 
 static void initializeSDL()
 {
 	if (!SDL_Init(SDL_INIT_VIDEO))
 		throw std::exception("Failed to initialize SDL3");
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
-	window = new sxi::Window();
+	window = new sxi::Window(1600, 900);
 	window->initialize();
 }
 
@@ -34,8 +42,9 @@ static void initializeRenderer()
 
 	renderer->initialize(
 		window,
-		sxi::file::readFileAsBytes("C:/code/StartingXI/MysteriousGame/shaders/generated/triangle_vert.spv"),
-		sxi::file::readFileAsBytes("C:/code/StartingXI/MysteriousGame/shaders/generated/triangle_frag.spv")
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_vert.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_frag.spv"),
+		&model
 	);
 }
 

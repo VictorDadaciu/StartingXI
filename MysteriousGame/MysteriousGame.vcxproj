@@ -57,16 +57,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>
-		  C:\code\StartingXI\ext\glm;
-		  C:\VulkanSDK\1.4.321.1\Include;
-		  C:\code\StartingXI\ext\SDL3-3.2.16\include;
-		  C:\code\StartingXI\SXICore;
-		  C:\code\StartingXI\SXIMath;
-		  C:\code\StartingXI\SXIRenderer;
-		  C:\code\StartingXI\SXIPathfinding;
-		  %(AdditionalIncludeDirectories)
-	  </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\ext\glm;C:\VulkanSDK\1.4.321.1\Include;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\SXIRenderer;C:\code\StartingXI\SXIPathfinding;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -95,16 +86,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-	  <AdditionalIncludeDirectories>
-		  C:\code\StartingXI\ext\glm;
-		  C:\VulkanSDK\1.4.321.1\Include;
-		  C:\code\StartingXI\ext\SDL3-3.2.16\include;
-		  C:\code\StartingXI\SXICore;
-		  C:\code\StartingXI\SXIMath;
-		  C:\code\StartingXI\SXIRenderer;
-		  C:\code\StartingXI\SXIPathfinding;
-		  %(AdditionalIncludeDirectories)
-	  </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\ext\glm;C:\VulkanSDK\1.4.321.1\Include;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\SXIRenderer;C:\code\StartingXI\SXIPathfinding;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,8 +108,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="scripts/compile.ps1" />
-    <None Include="shaders/triangle.frag" />
-    <None Include="shaders/triangle.vert" />
+    <None Include="shaders\basic.frag" />
+    <None Include="shaders\basic.vert" />
   </ItemGroup>
   <ItemGroup>
     <UpToDateCheckInput Include="shaders/*.vert" />

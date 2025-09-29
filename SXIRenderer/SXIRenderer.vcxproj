@@ -11,11 +11,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Model.h" />
     <ClInclude Include="Renderer.h" />
+    <ClInclude Include="Texture.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Model.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -72,7 +76,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\ext\glm;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\ext\tiny_obj_loader;C:\code\StartingXI\ext\stb;C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\ext\glm;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -101,7 +105,7 @@
       <StringPooling>true</StringPooling>
       <FloatingPointModel>Fast</FloatingPointModel>
       <FloatingPointExceptions>true</FloatingPointExceptions>
-      <AdditionalIncludeDirectories>C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\ext\glm;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\code\StartingXI\ext\tiny_obj_loader;C:\code\StartingXI\ext\stb;C:\code\StartingXI\SXICore;C:\code\StartingXI\SXIMath;C:\code\StartingXI\ext\glm;C:\code\StartingXI\ext\SDL3-3.2.16\include;C:\VulkanSDK\1.4.321.1\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
