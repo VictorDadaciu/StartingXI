@@ -19,8 +19,8 @@ const std::string SHADERS_GEN_PATH = "C:/code/StartingXI/MysteriousGame/shaders/
 
 static sxi::Window* window{};
 static sxi::Renderer* renderer{};
-static sxi::Texture texture(TEXTURES_PATH + "viking_room.png");
-static sxi::Model model(MODELS_PATH + "viking_room.obj", &texture);
+static sxi::Texture texture(TEXTURES_PATH + "tv.png");
+static sxi::Model model(MODELS_PATH + "tv.obj", &texture);
 
 static void initializeSDL()
 {
@@ -42,8 +42,8 @@ static void initializeRenderer()
 
 	renderer->initialize(
 		window,
-		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_vert.spv"),
-		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_frag.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic.vert.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic.frag.spv"),
 		&model
 	);
 }

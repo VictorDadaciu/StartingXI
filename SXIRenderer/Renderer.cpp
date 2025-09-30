@@ -708,7 +708,7 @@ namespace sxi
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.cullMode = VK_CULL_MODE_NONE;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
@@ -860,7 +860,7 @@ namespace sxi
 		throw std::exception("Failed to find supported format");
 	}
 
-	bool hasStencilComponent(VkFormat format)
+	static bool hasStencilComponent(VkFormat format)
 	{
 		return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
 	}
@@ -1520,13 +1520,13 @@ namespace sxi
 	
 	void Renderer::updateUniformBuffers(const Time& time, u32 currentFrame)
 	{
-		//static TimePoint start = time.time;
-		//float timePassed = Time::elapsed(time.time, start);
+		static TimePoint start = time.time;
+		float timePassed = Time::elapsed(time.time, start);
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(-90.f), SXI_VEC3_RIGHT);
-		ubo.view = glm::lookAt(glm::vec3(1.3f, 1.3f, -1.3f), SXI_VEC3_ZERO, SXI_VEC3_UP);
-		ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
+		ubo.model = glm::rotate(glm::mat4(1.0f), 0.25F * timePassed * glm::radians(-90.f), SXI_VEC3_UP);
+		ubo.view = glm::lookAt(glm::vec3(10.f, 10.f, -10.f), SXI_VEC3_ZERO, SXI_VEC3_UP);
+		ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10000.0f);
 		ubo.proj[1][1] *= -1;
 
 		memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));

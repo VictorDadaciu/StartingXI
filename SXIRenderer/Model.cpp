@@ -34,10 +34,17 @@ namespace sxi
                     attrib.vertices[3 * index.vertex_index + 2]
                 };
 
-                vertex.uv = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-                };
+                if (index.texcoord_index == -1)
+                {
+                    vertex.uv = SXI_VEC2_ZERO;
+                }
+                else
+                {
+                    vertex.uv = {
+                        attrib.texcoords[2 * index.texcoord_index + 0],
+                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                    };
+                }
 
                 vertex.col = {1.0f, 1.0f, 1.0f};
 

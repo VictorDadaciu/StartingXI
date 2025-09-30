@@ -65,11 +65,10 @@
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.321.1\Lib;C:\code\StartingXI\ext\SDL3-3.2.16\lib\x64;C:\code\StartingXI\x64\Debug</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL3.lib;SXICore.lib;SXIMath.lib;SXIRenderer.lib;SXIPathfinding.lib</AdditionalDependencies>
     </Link>
-    <PostBuildEvent>
-      <Command>powershell.exe ./scripts/compile.ps1
-</Command>
+    <PreBuildEvent>
+      <Command>python scripts/compile_shaders.py</Command>
       <Message>Compile GLSL shader code to SPIRV</Message>
-    </PostBuildEvent>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -94,24 +93,22 @@
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.4.321.1\Lib;C:\code\StartingXI\ext\SDL3-3.2.16\lib\x64;C:\code\StartingXI\x64\Release</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;SDL3.lib;SXICore.lib;SXIMath.lib;SXIRenderer.lib;SXIPathfinding.lib</AdditionalDependencies>
     </Link>
-    <PostBuildEvent>
-      <Command>powershell.exe ./sripts/compile.ps1
-</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
+    <PreBuildEvent>
+      <Command>python scripts/compile_shaders.py</Command>
       <Message>Compile GLSL shader code to SPIRV</Message>
-    </PostBuildEvent>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="PathfindingTestApp.cpp" />
     <ClCompile Include="MysteriousGame.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="scripts/compile.ps1" />
+    <None Include="scripts\compile_shaders.py" />
     <None Include="shaders\basic.frag" />
     <None Include="shaders\basic.vert" />
   </ItemGroup>
   <ItemGroup>
+    <UpToDateCheckInput Include="shaders" />
     <UpToDateCheckInput Include="shaders/*.vert" />
     <UpToDateCheckInput Include="shaders/*.frag" />
   </ItemGroup>
