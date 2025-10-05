@@ -1,3 +1,0 @@
-#!/bin/bash
-
-python3 ../../scripts/compile_shaders.py ../shaders -o ../shaders/generated
