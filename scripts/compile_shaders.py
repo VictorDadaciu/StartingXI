@@ -19,6 +19,7 @@ def parse_args() -> None:
     args = vars(parser.parse_args(argv))
     global GLSL_DIR
     GLSL_DIR = os.path.abspath(args["glsl"])
+    print(GLSL_DIR)
     if not (os.path.exists(GLSL_DIR) and os.path.isdir(GLSL_DIR)):
         parser.error("Input path must be a valid directory")
     spirv: str | None = args["spirv"]
