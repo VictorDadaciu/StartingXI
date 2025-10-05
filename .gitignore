@@ -1,9 +1,4 @@
-.vs
-ext
+.vscode
 generated
 renderdoc
-x64
-
-*.user
-*.filters
-*.TMP
+build
