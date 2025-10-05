@@ -19,8 +19,8 @@ const std::string SHADERS_GEN_PATH = "../../MysteriousGame/shaders/generated/";
 
 static sxi::Window* window{};
 static sxi::Renderer* renderer{};
-static sxi::Texture texture(TEXTURES_PATH + "tv.png");
-static sxi::Model model(MODELS_PATH + "tv.obj", &texture);
+static sxi::Texture texture(TEXTURES_PATH + "chair_basecolor.png");
+static sxi::Model model(MODELS_PATH + "Rocking_Chair.obj", &texture);
 
 static void initializeSDL()
 {
