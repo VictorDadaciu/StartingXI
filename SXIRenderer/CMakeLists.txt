@@ -7,10 +7,12 @@ project(SXIRenderer VERSION 1.0
 add_library(${PROJECT_NAME} STATIC
             src/Model.cpp
             src/Renderer.cpp
+            src/Renderer2.cpp
             src/Texture.cpp
             src/Window.cpp
             include/${PROJECT_NAME}/Model.h
             include/${PROJECT_NAME}/Renderer.h
+            include/${PROJECT_NAME}/Renderer2.h
             include/${PROJECT_NAME}/Texture.h
             include/${PROJECT_NAME}/Window.h)
 

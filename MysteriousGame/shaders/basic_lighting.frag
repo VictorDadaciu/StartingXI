@@ -6,11 +6,15 @@ layout(location = 2) in vec3 fragModelPos;
 
 layout(binding = 1) uniform sampler2D texSampler;
 
+layout(push_constant) uniform PushConstants
+{
+    vec3 lightPos;
+} pushConstants;
+
 layout(location = 0) out vec4 outColor;
 
 const float ambientStrength = 0.1f;
 const vec3 lightColor = vec3(1.0f);
-const vec3 lightPos = vec3(50, 20, 50);
 const vec3 camPos = vec3(50, 50, -50);
 const float specularStrength = 0.5;
 
@@ -18,7 +22,7 @@ void main()
 {
     // diffuse
     vec3 norm = normalize(fragNorm);
-    vec3 lightDir = normalize(lightPos - fragModelPos);  
+    vec3 lightDir = normalize(pushConstants.lightPos - fragModelPos);  
     float diff = max(dot(norm, lightDir), 0.0);
 
     // specular

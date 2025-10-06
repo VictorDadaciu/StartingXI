@@ -11,6 +11,9 @@
 #include <array>
 #include <stdexcept>
 
+#include <SDL3/SDL_vulkan.h>
+
+#include "SXICore/Exception.h"
 #include "SXIMath/Vec.h"
 
 static VkDebugUtilsMessengerEXT debugMessenger{};
@@ -53,10 +56,10 @@ namespace sxi
 {
 	const static uint8_t MAX_FRAMES_IN_FLIGHT = 2;
 #ifdef NDEBUG
-	const static bool enableValidationLayers = false;
+	static bool enableValidationLayers = false;
 	const static std::vector<const char*> validationLayers(0);
 #else
-	const static bool enableValidationLayers = true;
+	static bool enableValidationLayers = true;
 	const static std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
 #endif // DEBUG
 
@@ -273,7 +276,6 @@ namespace sxi
 
 	QueueFamilyIndices Renderer::findQueueFamilies(const VkPhysicalDevice device) const
 	{
-
 		u32 queueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -746,10 +748,15 @@ namespace sxi
 		colorBlending.blendConstants[2] = 0.0f;
 		colorBlending.blendConstants[3] = 0.0f;
 
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(PushConstants);
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
+		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
@@ -1488,6 +1495,9 @@ namespace sxi
 
 		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
+		PushConstants pushConstants{ lightPos[currentFrame] };
+		vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &pushConstants);
+
 		vkCmdDrawIndexed(commandBuffer, SXI_TO_U32(model->indices().size()), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(commandBuffer);
@@ -1525,12 +1535,14 @@ namespace sxi
 		float timePassed = Time::elapsed(time.time, start);
 
 		UniformBufferObject ubo{};
-		ubo.model = glm::rotate(glm::mat4(1.0f), 0.4F * timePassed * glm::radians(-90.f), SXI_VEC3_UP);
+		ubo.model = glm::rotate(glm::mat4(1.0f), 0.1f * timePassed * glm::radians(-90.f), SXI_VEC3_UP);
 		ubo.view = glm::lookAt(glm::vec3(50.f, 50.f, -50.f), glm::vec3(0.f, 20.f, 0.f), SXI_VEC3_UP);
 		ubo.proj = glm::perspective(glm::radians(60.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10000.0f);
 		ubo.proj[1][1] *= -1;
 
 		memcpy(uniformBuffersMapped[currentFrame], &ubo, sizeof(ubo));
+
+		lightPos[currentFrame] = glm::vec3(50.f * std::sinf(timePassed), 20, 50.f * std::cosf(timePassed));
 	}
 
 	void Renderer::render(const Time& time)

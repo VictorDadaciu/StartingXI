@@ -10,6 +10,10 @@
 
 namespace sxi
 {
+	struct PushConstants {
+		alignas(16) glm::vec3 lightPos;
+	};
+
 	struct QueueFamilyIndices
 	{
 		std::optional<u32> graphicsFamily;
@@ -146,6 +150,7 @@ namespace sxi
 		VkQueue presentQueue{};
 
 		Model* model;
+		std::array<glm::vec3, 2> lightPos{};
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		bool initialized = false;
