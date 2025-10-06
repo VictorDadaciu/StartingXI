@@ -15,7 +15,7 @@ namespace sxi
 	struct Vertex
 	{
 		glm::vec3 pos;
-		glm::vec3 col;
+		glm::vec3 norm;
 		glm::vec2 uv;
 
 		static VkVertexInputBindingDescription getBindingDescription()
@@ -37,7 +37,7 @@ namespace sxi
 			attributeDescs[1].binding = 0;
 			attributeDescs[1].location = 1;
 			attributeDescs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescs[1].offset = offsetof(Vertex, col);
+			attributeDescs[1].offset = offsetof(Vertex, norm);
 			attributeDescs[2].binding = 0;
 			attributeDescs[2].location = 2;
 			attributeDescs[2].format = VK_FORMAT_R32G32_SFLOAT;
@@ -45,7 +45,7 @@ namespace sxi
 			return attributeDescs;
 		}
 
-		inline bool operator==(const Vertex& other) const { return pos == other.pos && col == other.col && uv == other.uv; }
+		inline bool operator==(const Vertex& other) const { return pos == other.pos && norm == other.norm && uv == other.uv; }
 	};
 
 	class Model
@@ -77,7 +77,7 @@ namespace std
 		size_t operator()(const sxi::Vertex& vertex) const
 		{
 			return ((hash<glm::vec3>()(vertex.pos) ^
-					 (hash<glm::vec3>()(vertex.col) << 1)) >> 1) ^
+					 (hash<glm::vec3>()(vertex.norm) << 1)) >> 1) ^
 				(hash<glm::vec2>()(vertex.uv) << 1);
 		}
 	};

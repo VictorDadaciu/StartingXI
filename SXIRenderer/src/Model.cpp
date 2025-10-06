@@ -27,11 +27,16 @@ namespace sxi
             for (const auto& index : shape.mesh.indices)
             {
                 Vertex vertex{};
-
                 vertex.pos = {
                     attrib.vertices[3 * index.vertex_index + 0],
                     attrib.vertices[3 * index.vertex_index + 1],
                     attrib.vertices[3 * index.vertex_index + 2]
+                };
+
+                vertex.norm = {
+                    attrib.normals[3 * index.normal_index + 0],
+                    attrib.normals[3 * index.normal_index + 1],
+                    attrib.normals[3 * index.normal_index + 2]
                 };
 
                 if (index.texcoord_index == -1)
@@ -45,8 +50,6 @@ namespace sxi
                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
                     };
                 }
-
-                vertex.col = {1.0f, 1.0f, 1.0f};
 
                 if (uniqueVerts.count(vertex) == 0)
                 {

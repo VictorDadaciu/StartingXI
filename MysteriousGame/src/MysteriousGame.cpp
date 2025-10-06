@@ -42,8 +42,8 @@ static void initializeRenderer()
 
 	renderer->initialize(
 		window,
-		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic.vert.spv"),
-		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic.frag.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"),
 		&model
 	);
 }
