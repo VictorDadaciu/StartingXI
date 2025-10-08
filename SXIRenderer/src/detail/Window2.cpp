@@ -6,6 +6,7 @@
 #include <limits>
 #include <algorithm>
 #include <iostream>
+#include <set>
 
 #include "SXICore/Exception.h"
 
@@ -48,11 +49,15 @@ namespace sxi::renderer::detail
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		if (context->queueFamilyIndicesUsed[0] != context->queueFamilyIndicesUsed[1])
+		std::vector<u32> queueFamiliesUsed{};
+		for (const auto& queueFamilyUsed : context->queueFamiliesUsed)
+			queueFamiliesUsed.push_back(queueFamilyUsed.first);
+
+		if (context->queueFamiliesUsed.size() > 1)
 		{
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			createInfo.queueFamilyIndexCount = 2;
-			createInfo.pQueueFamilyIndices = context->queueFamilyIndicesUsed.data();
+			createInfo.queueFamilyIndexCount = SXI_TO_U32(queueFamiliesUsed.size());
+			createInfo.pQueueFamilyIndices = queueFamiliesUsed.data();
 		}
 		else
 		{

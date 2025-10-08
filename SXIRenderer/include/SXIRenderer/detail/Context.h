@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <array>
+#include <unordered_map>
 
 #include "SXICore/Types.h"
 
@@ -30,21 +31,6 @@ namespace sxi::renderer::detail
 
 	extern struct Context
 	{
-		VkInstance instance{};
-		std::vector<PhysicalDevice> physicalDevices;
-		size_t currentPhysicalDeviceIndex{};
-		VkDevice logicalDevice{};
-		VkQueue graphicsQueue{};
-		VkQueue presentQueue{};
-		VkQueue transferQueue{};
-        std::array<u32, 2> queueFamilyIndicesUsed{};
-
-		Context(const VkInstance&, const VkSurfaceKHR&, const std::vector<const char*>&);
-		~Context();
-
-		inline const PhysicalDevice& currentPhysicalDevice() const { return physicalDevices[currentPhysicalDeviceIndex]; }
-
-	private:
 		enum QueueFamilyInternalIdx {
 			GRAPHICS = 0,
 			PRESENT = 1,
@@ -52,6 +38,21 @@ namespace sxi::renderer::detail
 			COUNT = 3
 		};
 
+		VkInstance instance{};
+		std::vector<PhysicalDevice> physicalDevices;
+		size_t currentPhysicalDeviceIndex{};
+		VkDevice logicalDevice{};
+		VkQueue graphicsQueue{};
+		VkQueue presentQueue{};
+		VkQueue transferQueue{};
+        std::unordered_map<u8, u8> queueFamiliesUsed{};
+
+		Context(const VkInstance&, const VkSurfaceKHR&, const std::vector<const char*>&);
+		~Context();
+
+		inline const PhysicalDevice& currentPhysicalDevice() const { return physicalDevices[currentPhysicalDeviceIndex]; }
+
+	private:
 		void enumeratePhysicalDevices(const VkSurfaceKHR&);
 		void chooseBestPhysicalDevice();
 		void createLogicalDevice(const VkSurfaceKHR&, const std::vector<const char*>&);

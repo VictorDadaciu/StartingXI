@@ -2,7 +2,6 @@
 
 #include <string>
 #include <set>
-#include <unordered_map>
 #include <limits>
 #include <array>
 #include <iostream>
@@ -134,15 +133,14 @@ namespace sxi::renderer::detail
 		// pair -> first: queue family index, second: queue index within queue family
 		std::array<std::pair<u8, u8>, QueueFamilyInternalIdx::COUNT> queueFamilyIndices = chooseQueueFamilyIndices(surface);
 		
-        std::unordered_map<u8, u8> indicesCoalesced{};
         for (const std::pair<u8, u8>& queueRequest : queueFamilyIndices)
-            if (indicesCoalesced.find(queueRequest.first) != indicesCoalesced.end())
-                indicesCoalesced[queueRequest.first]++;
+            if (queueFamiliesUsed.find(queueRequest.first) != queueFamiliesUsed.end())
+                queueFamiliesUsed[queueRequest.first]++;
             else
-                indicesCoalesced[queueRequest.first] = 1;
+                queueFamiliesUsed[queueRequest.first] = 1;
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos{};
-		for (const auto& it : indicesCoalesced)
+		for (const auto& it : queueFamiliesUsed)
 		{
 			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -181,8 +179,6 @@ namespace sxi::renderer::detail
 		vkGetDeviceQueue(logicalDevice, queueFamilyIndices[GRAPHICS].first, queueFamilyIndices[GRAPHICS].second, &graphicsQueue);
 		vkGetDeviceQueue(logicalDevice, queueFamilyIndices[PRESENT].first, queueFamilyIndices[PRESENT].second, &presentQueue);
 		vkGetDeviceQueue(logicalDevice, queueFamilyIndices[TRANSFER].first, queueFamilyIndices[TRANSFER].second, &transferQueue);
-        queueFamilyIndicesUsed[GRAPHICS] = queueFamilyIndices[GRAPHICS].first;
-        queueFamilyIndicesUsed[PRESENT] = queueFamilyIndices[PRESENT].first;
 	}
 
 	std::array<std::pair<u8, u8>, Context::QueueFamilyInternalIdx::COUNT> 
