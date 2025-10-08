@@ -55,8 +55,8 @@ static void loop()
 
 int main(int argc, char* args[])
 {
-	sxi::renderer::init();
-	//loop();
+	sxi::renderer::init(1600, 900);
+	loop();
 	sxi::renderer::destroy();
 	return 0;
 }

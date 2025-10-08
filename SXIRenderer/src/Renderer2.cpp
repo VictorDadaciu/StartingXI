@@ -1,68 +1,60 @@
 #include "Renderer2.h"
+#include "detail/Context.h"
+#include "detail/Window2.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
-#include <vector>
-#include <string>
-#include <string.h>
 #include <iostream>
-#include <limits>
-#include <set>
+#include <vector>
 
-#include "SXICore/Types.h"
 #include "SXICore/Exception.h"
-static VkDebugUtilsMessengerEXT debugMessenger{};
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-	VkDebugUtilsMessageTypeFlagsEXT messageType,
-	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData)
-{
-	if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) 
-	{
-		std::cout << "Validation layer: " << pCallbackData->pMessage << std::endl;
-	}
-
-	return VK_FALSE;
-}
-
-static VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
-{
-	auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-	if (func != nullptr)
-	{
-		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-	} 
-	else 
-	{
-		return VK_ERROR_EXTENSION_NOT_PRESENT;
-	}
-}
-
-static void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
-{
-	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-	if (func != nullptr)
-		func(instance, debugMessenger, pAllocator);
-}
-
-namespace sxi
+namespace sxi::renderer
 {
 	const static uint8_t MAX_FRAMES_IN_FLIGHT = 2;
 #ifdef NDEBUG
 	static bool enableValidationLayers = false;
-	const static std::vector<const char*> validationLayers(0);
 #else
 	static bool enableValidationLayers = true;
-	const static std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
-#endif // DEBUG
+#endif
 
-	static const std::vector<const char*> deviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
+	static VkDebugUtilsMessengerEXT debugMessenger{};
+
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+		void* pUserData)
+	{
+		if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) 
+		{
+			std::cout << "Validation layer: " << pCallbackData->pMessage << std::endl;
+		}
+
+		return VK_FALSE;
+	}
+
+	static VkResult createDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+	{
+		auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+		if (func != nullptr)
+		{
+			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+		} 
+		else 
+		{
+			return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
+	}
+
+	static void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+	{
+		auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+		if (func != nullptr)
+			func(instance, debugMessenger, pAllocator);
+	}
 
 	static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 	{
@@ -73,7 +65,7 @@ namespace sxi
 		createInfo.pUserData = nullptr;
 	}
 
-	static bool checkValidationLayerSupport()
+	static bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers)
 	{
 		u32 layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -99,225 +91,68 @@ namespace sxi
 
 		return true;
 	}
-}
 
-namespace sxi::renderer
-{
-	struct PhysicalDevice
+	static VkInstance createInstance(const std::vector<const char*>& validationLayers)
 	{
-		PhysicalDevice() = default;
-		PhysicalDevice(const VkPhysicalDevice& physicalDevice) : device(physicalDevice)
+		VkInstance instance;
+
+		u32 extensionsCount{};
+		const char* const * SDL_extensions = SDL_Vulkan_GetInstanceExtensions(&extensionsCount);
+		std::vector<const char*> extensions(SDL_extensions, SDL_extensions + extensionsCount);
+		if (enableValidationLayers)
 		{
-			vkGetPhysicalDeviceProperties(device, &properties);
-			vkGetPhysicalDeviceFeatures(device, &features);
-
-			u32 queueFamilyCount = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-			queueFamilies.resize(queueFamilyCount);
-			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-		}
-
-		bool suitable() const
-		{
-			if (!supportsExtensions())
-				return false;
-
-			if (!features.samplerAnisotropy)
-				return false;
-
-			// TODO
-			// SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-			// if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
-			// 	return std::numeric_limits<int>::min();
-            return true;
-		}
-
-        bool supportsExtensions() const
-        {
-            u32 extensionCount;
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-            std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-            for (const auto& extension : availableExtensions)
-                requiredExtensions.erase(extension.extensionName);
-
-            return requiredExtensions.empty();
-        }
-
-		int score() const
-		{
-			int score = 0;
-			if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-				score += 100;
-			else if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-				return std::numeric_limits<int>::min();
-
-			return score;
-		}
-
-		VkPhysicalDevice device{};
-		VkPhysicalDeviceProperties properties{};
-		VkPhysicalDeviceFeatures features{};
-		std::vector<VkQueueFamilyProperties> queueFamilies{};
-	};
-
-	static struct Context
-	{
-		Context(std::vector<const char*>&& extensions)
-		{
-			createInstance(std::move(extensions));
-			if (enableValidationLayers)
-				setupDebugCallback();
-			enumeratePhysicalDevices();
-			chooseBestPhysicalDevice();
-            createLogicalDevice();
-		}
-
-		~Context()
-		{   
-            vkDeviceWaitIdle(device);
-			vkDestroyDevice(device, nullptr);
-
-            if (enableValidationLayers)
-			    destroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
-
-			vkDestroyInstance(instance, nullptr);
-		}
-
-		VkInstance instance{};
-		std::vector<PhysicalDevice> physicalDevices{};
-		size_t currentPhysicalDeviceIndex{};
-		VkDevice device{};
-
-	private:
-		void createInstance(std::vector<const char*>&& extensions)
-		{
-			if (enableValidationLayers && !checkValidationLayerSupport())
+			if (!checkValidationLayerSupport(validationLayers))
 				throw InitializationException("Vulkan validation layers not supported by installed version.");
 
-			VkApplicationInfo appInfo{};
-			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-			appInfo.pApplicationName = "Mysterious Game";
-			appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-			appInfo.pEngineName = "Starting XI";
-			appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-			appInfo.apiVersion = VK_API_VERSION_1_0;
-
-			VkInstanceCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-			createInfo.pApplicationInfo = &appInfo;
-			createInfo.enabledExtensionCount = SXI_TO_U32(extensions.size());
-			createInfo.ppEnabledExtensionNames = extensions.data();
-
-			VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
-			if (enableValidationLayers)
-			{
-				createInfo.enabledLayerCount = SXI_TO_U32(validationLayers.size());
-				createInfo.ppEnabledLayerNames = validationLayers.data();
-
-				populateDebugMessengerCreateInfo(debugCreateInfo);
-				createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
-			}
-			else
-			{
-				createInfo.enabledLayerCount = 0;
-				createInfo.pNext = nullptr;
-			}
-
-			if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
-				throw std::runtime_error("Failed to create Vulkan instance");
+			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		}
 
-		void setupDebugCallback() const
+		VkApplicationInfo appInfo{};
+		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+		appInfo.pApplicationName = "Mysterious Game";
+		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+		appInfo.pEngineName = "Starting XI";
+		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+		appInfo.apiVersion = VK_API_VERSION_1_0;
+
+		VkInstanceCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		createInfo.pApplicationInfo = &appInfo;
+		createInfo.enabledExtensionCount = SXI_TO_U32(extensions.size());
+		createInfo.ppEnabledExtensionNames = extensions.data();
+
+		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+		if (enableValidationLayers)
 		{
-			VkDebugUtilsMessengerCreateInfoEXT createInfo{};
-			populateDebugMessengerCreateInfo(createInfo);
+			createInfo.enabledLayerCount = SXI_TO_U32(validationLayers.size());
+			createInfo.ppEnabledLayerNames = validationLayers.data();
 
-			if (createDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
-				throw InitializationException("Failed to create debug messenger.");
+			populateDebugMessengerCreateInfo(debugCreateInfo);
+			createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
 		}
-
-		void enumeratePhysicalDevices()
+		else
 		{
-			u32 deviceCount;
-			vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-
-			if (deviceCount == 0)
-				throw InitializationException("No physical device found.");
-
-			std::vector<VkPhysicalDevice> candidatePhysicalDevices(deviceCount);
-			vkEnumeratePhysicalDevices(instance, &deviceCount, candidatePhysicalDevices.data());
-			for (VkPhysicalDevice physicalDevice : candidatePhysicalDevices)
-			{
-				PhysicalDevice candidate(physicalDevice);
-				if (candidate.suitable())
-					physicalDevices.push_back(std::move(candidate));
-			}
-			physicalDevices.shrink_to_fit();
-			if (physicalDevices.size() == 0)
-				throw InitializationException("No suitable physical device found.");
+			createInfo.enabledLayerCount = 0;
+			createInfo.pNext = nullptr;
 		}
 
-		void chooseBestPhysicalDevice()
-		{
-			int bestScore = -1;
-			for (size_t i = 0; i < physicalDevices.size(); ++i)
-			{
-				int score = physicalDevices[i].score();
-				if (score > bestScore)
-				{
-					bestScore = score;
-					currentPhysicalDeviceIndex = i;
-					// TODO msaaSamples = getMaxUsableSampleCount();
-				}
-			}
-		}
+		if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+			throw InitializationException("Failed to create Vulkan instance");
 
-        void createLogicalDevice()
-        {
-            float queuePriority = 1.0f;
-            VkDeviceQueueCreateInfo queueCreateInfo{};
-            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueFamilyIndex = 0;
-            queueCreateInfo.queueCount = 1;
-            queueCreateInfo.pQueuePriorities = &queuePriority;
+		return instance;
+	}
+	
+	static void setupDebugCallback(const VkInstance& instance)
+	{
+		VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+		populateDebugMessengerCreateInfo(createInfo);
 
-			VkPhysicalDeviceFeatures enabledFeatures{};
-			enabledFeatures.samplerAnisotropy = VK_TRUE;
-			enabledFeatures.sampleRateShading = VK_TRUE;
-
-			VkDeviceCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			createInfo.pQueueCreateInfos = &queueCreateInfo;
-			createInfo.queueCreateInfoCount = 1;
-			createInfo.pEnabledFeatures = &enabledFeatures;
-			createInfo.enabledExtensionCount = SXI_TO_U32(deviceExtensions.size());
-			createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-			if (enableValidationLayers)
-			{
-				createInfo.enabledLayerCount = SXI_TO_U32(validationLayers.size());
-				createInfo.ppEnabledLayerNames = validationLayers.data();
-			}
-			else
-			{
-				createInfo.enabledLayerCount = 0;
-			}
-
-			if (vkCreateDevice(physicalDevices[currentPhysicalDeviceIndex].device, &createInfo, nullptr, &device) != VK_SUCCESS)
-				throw InitializationException("Failed to create logical device.");
-
-            VkQueue queue{};
-			vkGetDeviceQueue(device, 0, 0, &queue);
-        }
-	} *context{};
+		if (createDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
+			throw InitializationException("Failed to create debug messenger.");
+	}
 
 	static bool initialized = false;
-	void init(bool releaseValidationLayers)
+	void init(u32 width, u32 height, bool releaseValidationLayers)
 	{
 		if (initialized)
 			throw InitializationException("Renderer already initialized, cannot initialize again before destruction.");
@@ -327,15 +162,21 @@ namespace sxi::renderer
 
 		SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 
-		u32 extensionsCount{};
-		const char* const * SDL_extensions = SDL_Vulkan_GetInstanceExtensions(&extensionsCount);
-		std::vector<const char*> extensions(SDL_extensions, SDL_extensions + extensionsCount);
-		if (!enableValidationLayers)
-			enableValidationLayers = releaseValidationLayers;
+		enableValidationLayers |= releaseValidationLayers;
+		std::vector<const char*> validationLayers{};
 		if (enableValidationLayers)
-			extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			validationLayers.push_back("VK_LAYER_KHRONOS_validation");
 
-		context = new Context(std::move(extensions));
+		VkInstance instance = createInstance(validationLayers);
+
+		SDL_Window* sdlWindow{};
+		if (sdlWindow = SDL_CreateWindow("Mysterious Game", width, height, SDL_WINDOW_VULKAN); sdlWindow == nullptr)
+			throw ResourceCreationException("Failed to create SDL window");
+
+		VkSurfaceKHR surface{};
+		SDL_Vulkan_CreateSurface(sdlWindow, instance, nullptr, &surface);
+		detail::context = new detail::Context(instance, surface, validationLayers);
+		detail::window = new detail::Window(sdlWindow, surface);
 
 		initialized = true;
 	}
@@ -344,8 +185,12 @@ namespace sxi::renderer
 	{
 		if (!initialized)
 			return;
-
-		delete context;
+		
+		vkDeviceWaitIdle(detail::context->logicalDevice);
+		
+		delete detail::window;
+		destroyDebugUtilsMessengerEXT(detail::context->instance, debugMessenger, nullptr);
+		delete detail::context;
 
 	    SDL_Quit();
 		initialized = false;
