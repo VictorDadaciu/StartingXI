@@ -202,24 +202,24 @@ namespace sxi
 
 		if (enableValidationLayers)
 			setupDebugCallback();
-		choosePhysicalDevice();
-		createLogicalDevice();
-		createSwapChain();
-		createImageViews();
-		createRenderPass();
-		createDescriptorSetLayout();
+		choosePhysicalDevice(); // done
+		createLogicalDevice(); // done
+		createSwapChain(); // done
+		createImageViews(); // done
+		createRenderPass(); // done
+		createDescriptorSetLayout(); // done x3
 		createGraphicsPipeline(std::move(vertCode), std::move(fragCode));
-		createCommandPool();
-		createColorResources();
-		createDepthResources();
-		createFrameBuffers();
+		createCommandPool(); // done
+		createColorResources(); // done
+		createDepthResources(); // done
+		createFrameBuffers(); // done
 		createTextureImage();
 		createTextureImageView();
 		createTextureImageSampler();
 		createVertexBuffer();
 		createIndexBuffer();
 		createUniformBuffers();
-		createDescriptorPool();
+		createDescriptorPool(); // done
 		createDescriptorSets();
 		createCommandBuffer();
 		createSyncObjects();

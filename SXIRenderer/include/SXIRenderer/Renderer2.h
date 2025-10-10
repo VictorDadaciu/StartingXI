@@ -15,11 +15,15 @@ namespace sxi::renderer
      * @param bool releaseValidationLayers(=false): By default, validation layers are
      * 												disabled on release builds, set
      * 												this to true to force enable.
-     * 
-     * @throws InitializationException: if something went wrong during initialization
-     * 								    or if already initialized.
      */
     void init(u32, u32, bool=false);
+
+    /**
+     * @brief Renders the frame to the screen
+     * 
+     * Called once per frame
+     */
+    void render();
 
     /**
      * @brief Destroys the renderer and all associated data.

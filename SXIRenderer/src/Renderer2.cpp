@@ -1,6 +1,7 @@
 #include "Renderer2.h"
 #include "detail/Context.h"
 #include "detail/Window2.h"
+#include "detail/RenderPass.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -177,8 +178,17 @@ namespace sxi::renderer
 		SDL_Vulkan_CreateSurface(sdlWindow, instance, nullptr, &surface);
 		detail::context = new detail::Context(instance, surface, validationLayers);
 		detail::window = new detail::Window(sdlWindow, surface);
+		detail::renderPass = new detail::RenderPass();
 
 		initialized = true;
+	}
+
+	void render()
+	{
+		if (!initialized)
+			throw InitializationException("Renderer has not been initialized");
+
+		detail::context->nextFrame();
 	}
 
 	void destroy()
@@ -188,6 +198,7 @@ namespace sxi::renderer
 		
 		vkDeviceWaitIdle(detail::context->logicalDevice);
 		
+		delete detail::renderPass;
 		delete detail::window;
 		destroyDebugUtilsMessengerEXT(detail::context->instance, debugMessenger, nullptr);
 		delete detail::context;

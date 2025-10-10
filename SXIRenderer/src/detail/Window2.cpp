@@ -1,5 +1,6 @@
 #include "detail/Window2.h"
 #include "detail/Context.h"
+#include "detail/Utils.h"
 
 #include "SDL3/SDL_vulkan.h"
 
@@ -49,15 +50,16 @@ namespace sxi::renderer::detail
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-		std::vector<u32> queueFamiliesUsed{};
+		std::set<u32> queueFamiliesUsed{};
 		for (const auto& queueFamilyUsed : context->queueFamiliesUsed)
-			queueFamiliesUsed.push_back(queueFamilyUsed.first);
+			queueFamiliesUsed.insert(queueFamilyUsed.first);
 
-		if (context->queueFamiliesUsed.size() > 1)
+		if (queueFamiliesUsed.size() > 1)
 		{
+			std::vector<u32> queueFamilyIndices(queueFamiliesUsed.begin(), queueFamiliesUsed.end());
 			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			createInfo.queueFamilyIndexCount = SXI_TO_U32(queueFamiliesUsed.size());
-			createInfo.pQueueFamilyIndices = queueFamiliesUsed.data();
+			createInfo.queueFamilyIndexCount = SXI_TO_U32(queueFamilyIndices.size());
+			createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 		}
 		else
 		{
@@ -77,13 +79,28 @@ namespace sxi::renderer::detail
 		vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, nullptr);
 		images.resize(imageCount);
 		vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, images.data());
+
+		imageViews.resize(images.size());
+		for (size_t i = 0; i < imageViews.size(); i++)
+			imageViews[i] = createImageView(images[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			
+		renderFinishedSemaphores.resize(images.size());
+		for (size_t i = 0; i < renderFinishedSemaphores.size(); i++)
+			if (vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
+				throw ResourceCreationException("Failed to create semaphores");
     }
 
     Swapchain::~Swapchain()
     {
         vkDeviceWaitIdle(context->logicalDevice);
 
-		for (VkImageView imageView : imageViews)
+		for (const VkSemaphore& semaphore : renderFinishedSemaphores)
+			vkDestroySemaphore(context->logicalDevice, semaphore, nullptr);
+
+		for (const VkImageView& imageView : imageViews)
 			vkDestroyImageView(context->logicalDevice, imageView, nullptr);
 
 		vkDestroySwapchainKHR(context->logicalDevice, swapchain, nullptr);

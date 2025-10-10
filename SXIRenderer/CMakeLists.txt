@@ -12,6 +12,7 @@ add_library(${PROJECT_NAME} STATIC
             src/Window.cpp
             src/detail/Context.cpp
             src/detail/Window2.cpp
+            src/detail/RenderPass.cpp
             src/detail/Utils.cpp
             include/${PROJECT_NAME}/Model.h
             include/${PROJECT_NAME}/Renderer.h
@@ -20,6 +21,7 @@ add_library(${PROJECT_NAME} STATIC
             include/${PROJECT_NAME}/Window.h
             include/${PROJECT_NAME}/detail/Context.h
             include/${PROJECT_NAME}/detail/Window2.h
+            include/${PROJECT_NAME}/detail/RenderPass.h
             include/${PROJECT_NAME}/detail/Utils.h)
 
 target_link_libraries(${PROJECT_NAME}

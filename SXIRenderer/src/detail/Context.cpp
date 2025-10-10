@@ -1,11 +1,14 @@
 #include "detail/Context.h"
 
+#include "detail/Utils.h"
+
 #include <string>
 #include <set>
 #include <limits>
 #include <array>
 #include <iostream>
 
+#include "SXICore/Types.h"
 #include "SXICore/Exception.h"
 
 namespace sxi::renderer::detail
@@ -15,6 +18,48 @@ namespace sxi::renderer::detail
     static const std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
+
+	FrameContext::FrameContext(const VkDevice& logicalDevice, u8 graphicsQueueFamilyIndex)
+	{
+		createCommandPool(logicalDevice, graphicsQueueFamilyIndex);
+		createSyncObjects(logicalDevice);
+	}
+
+	FrameContext::~FrameContext()
+	{
+		vkDestroySemaphore(context->logicalDevice, imageAvailableSemaphore, nullptr);
+		vkDestroyFence(context->logicalDevice, inFlightFence, nullptr);
+
+		vkDestroyCommandPool(context->logicalDevice, commandPool, nullptr);
+	}
+
+	void FrameContext::createCommandPool(const VkDevice& logicalDevice, u8 graphicsQueueFamilyIndex)
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
+
+		if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+			throw ResourceCreationException("Failed to create command pool");
+	}
+
+	void FrameContext::createSyncObjects(const VkDevice& logicalDevice)
+	{
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS)
+			throw ResourceCreationException("Failed to create semaphore");
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		if (vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS)
+			throw ResourceCreationException("Failed to create fence");
+
+	}
 
     PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& surface) : device(physicalDevice)
 	{
@@ -37,6 +82,10 @@ namespace sxi::renderer::detail
 			swapchainSupport.presentModes.resize(presentModeCount);
 			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, swapchainSupport.presentModes.data());
 		}
+
+		vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
+
+		maxMSAASamples = getMaxUsableSampleCount();
 	}
 
 	bool PhysicalDevice::suitable() const
@@ -78,15 +127,43 @@ namespace sxi::renderer::detail
 		return score;
 	}
 
+	VkSampleCountFlagBits PhysicalDevice::getMaxUsableSampleCount() const
+	{
+		VkPhysicalDeviceProperties physicalDeviceProperties;
+		vkGetPhysicalDeviceProperties(device, &physicalDeviceProperties);
+
+		VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+		if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+		if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+		if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+		if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+		if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+		if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+		return VK_SAMPLE_COUNT_1_BIT;
+	}
+
 	Context::Context(const VkInstance& instance, const VkSurfaceKHR& surface, const std::vector<const char*>& layers) : instance(instance)
 	{
 		enumeratePhysicalDevices(surface);
 		chooseBestPhysicalDevice();
 		createLogicalDevice(surface, layers);
+		createDescriptorPool();
+		createDescriptorSetLayouts();
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+			frameContexts[i] = new FrameContext(logicalDevice, queueFamiliesUsed[GRAPHICS].first);
 	}
 
 	Context::~Context()
 	{
+		for (FrameContext* frameContext : frameContexts)
+			delete frameContext;
+
+		for (const VkDescriptorSetLayout& layout : descriptorSetLayouts)
+			vkDestroyDescriptorSetLayout(logicalDevice, layout, nullptr);
+
+		vkDestroyDescriptorPool(logicalDevice, descriptorPool, nullptr);
+
 		vkDestroyDevice(logicalDevice, nullptr);
 
 		vkDestroyInstance(instance, nullptr);
@@ -131,16 +208,17 @@ namespace sxi::renderer::detail
 	void Context::createLogicalDevice(const VkSurfaceKHR& surface, const std::vector<const char*>& layers)
 	{
 		// pair -> first: queue family index, second: queue index within queue family
-		std::array<std::pair<u8, u8>, QueueFamilyInternalIdx::COUNT> queueFamilyIndices = chooseQueueFamilyIndices(surface);
+		queueFamiliesUsed = chooseQueueFamilyIndices(surface);
 		
-        for (const std::pair<u8, u8>& queueRequest : queueFamilyIndices)
-            if (queueFamiliesUsed.find(queueRequest.first) != queueFamiliesUsed.end())
-                queueFamiliesUsed[queueRequest.first]++;
+		std::unordered_map<u8, u8> queueFamilyIndicesCondensed{};
+        for (const std::pair<u8, u8>& queueRequest : queueFamiliesUsed)
+            if (queueFamilyIndicesCondensed.find(queueRequest.first) != queueFamilyIndicesCondensed.end())
+                queueFamilyIndicesCondensed[queueRequest.first]++;
             else
-                queueFamiliesUsed[queueRequest.first] = 1;
+                queueFamilyIndicesCondensed[queueRequest.first] = 1;
 
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos{};
-		for (const auto& it : queueFamiliesUsed)
+		for (const auto& it : queueFamilyIndicesCondensed)
 		{
 			VkDeviceQueueCreateInfo queueCreateInfo{};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -176,12 +254,11 @@ namespace sxi::renderer::detail
 		if (vkCreateDevice(currentPhysicalDevice().device, &createInfo, nullptr, &logicalDevice) != VK_SUCCESS)
 			throw ResourceCreationException("Failed to create logical device.");
 
-		vkGetDeviceQueue(logicalDevice, queueFamilyIndices[GRAPHICS].first, queueFamilyIndices[GRAPHICS].second, &graphicsQueue);
-		vkGetDeviceQueue(logicalDevice, queueFamilyIndices[PRESENT].first, queueFamilyIndices[PRESENT].second, &presentQueue);
-		vkGetDeviceQueue(logicalDevice, queueFamilyIndices[TRANSFER].first, queueFamilyIndices[TRANSFER].second, &transferQueue);
+		vkGetDeviceQueue(logicalDevice, queueFamiliesUsed[GRAPHICS].first, queueFamiliesUsed[GRAPHICS].second, &graphicsQueue);
+		vkGetDeviceQueue(logicalDevice, queueFamiliesUsed[PRESENT].first, queueFamiliesUsed[PRESENT].second, &presentQueue);
 	}
 
-	std::array<std::pair<u8, u8>, Context::QueueFamilyInternalIdx::COUNT> 
+	std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> 
 		Context::chooseQueueFamilyIndices(const VkSurfaceKHR& surface) const
 	{
 		std::vector<VkQueueFamilyProperties> queueFamilies{};
@@ -190,49 +267,13 @@ namespace sxi::renderer::detail
 		queueFamilies.resize(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(currentPhysicalDevice().device, &queueFamilyCount, queueFamilies.data());
 
-		std::array<std::pair<u8, u8>, QueueFamilyInternalIdx::COUNT> queueFamilyIndices{};
+		std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> queueFamilyIndices{};
 		for (size_t i = 0; i < queueFamilies.size(); ++i)
 		{
 			if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
 				queueFamilyIndices[GRAPHICS] = std::pair<u8, u8>(SXI_TO_U8(i), 0);
 				break;
-			}
-		}
-
-		bool transferFound = false;
-		for (size_t i = 0; i < queueFamilies.size(); ++i)
-		{
-			if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT && (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
-			{
-				queueFamilyIndices[TRANSFER] = std::pair<u8, u8>(SXI_TO_U8(i), 0);
-				transferFound = true;
-				break;
-			}
-		}
-
-		if (!transferFound)
-		{
-			for (size_t i = 0; i < queueFamilies.size(); ++i)
-			{
-				if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
-				{
-					queueFamilyIndices[TRANSFER] = std::pair<u8, u8>(SXI_TO_U8(i), 0);
-					if (queueFamilyIndices[TRANSFER].first != queueFamilyIndices[GRAPHICS].first)
-						break;
-					
-					if (queueFamilies[i].queueCount > 2)
-					{
-						queueFamilyIndices[TRANSFER].second = 2;
-						break;
-					}
-					
-					if (queueFamilies[i].queueCount > 1)
-					{
-						queueFamilyIndices[TRANSFER].second = 1;
-						break;
-					}
-				}
 			}
 		}
 
@@ -243,7 +284,7 @@ namespace sxi::renderer::detail
 			vkGetPhysicalDeviceSurfaceSupportKHR(currentPhysicalDevice().device, i, surface, &presentSupport);
 			if (presentSupport)
 			{
-				if (queueFamilyIndices[GRAPHICS].first != queueFamilyIndices[PRESENT].first && queueFamilyIndices[TRANSFER].first != queueFamilyIndices[PRESENT].first)
+				if (queueFamilyIndices[GRAPHICS].first != queueFamilyIndices[PRESENT].first)
 				{
 					queueFamilyIndices[PRESENT] = std::pair<u8, u8>(SXI_TO_U8(i), 0);
 					presentFound = true;
@@ -266,15 +307,86 @@ namespace sxi::renderer::detail
 						queueFamilyIndices[PRESENT].second = queueFamilies[i].queueCount > 1;
 						break;
 					}
-
-					if (queueFamilyIndices[TRANSFER].first == queueFamilyIndices[PRESENT].first && queueFamilies[i].queueCount > 1)
-					{
-						queueFamilyIndices[PRESENT].second = 1;
-						break;
-					}
 				}
 			}
 		}
 		return queueFamilyIndices;
+	}
+
+	void Context::createDescriptorPool()
+	{
+		std::array<VkDescriptorPoolSize, 2> poolSizes{};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = 1000;
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = 2;
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = SXI_TO_U32(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+		poolInfo.maxSets = 1000;
+
+		if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+			throw ResourceCreationException("Failed to create descriptor pool");
+	}
+
+	void Context::createDescriptorSetLayouts()
+	{
+		// per frame
+		{
+			VkDescriptorSetLayoutBinding matricesLayoutBinding{};
+			matricesLayoutBinding.binding = 0;
+			matricesLayoutBinding.descriptorCount = 1;
+			matricesLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			matricesLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+			VkDescriptorSetLayoutBinding lightLayoutBinding{};
+			lightLayoutBinding.binding = 1;
+			lightLayoutBinding.descriptorCount = 1;
+			lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			
+			std::array<VkDescriptorSetLayoutBinding, 2> bindings = {matricesLayoutBinding, lightLayoutBinding};
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = SXI_TO_U32(bindings.size());
+			layoutInfo.pBindings = bindings.data();
+			
+			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerFrame]) != VK_SUCCESS)
+				throw ResourceCreationException("Failed to create descriptor set layout");
+		}
+		// per material
+		{
+			VkDescriptorSetLayoutBinding matricesLayoutBinding{};
+			matricesLayoutBinding.binding = 0;
+			matricesLayoutBinding.descriptorCount = 1;
+			matricesLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			matricesLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = 1;
+			layoutInfo.pBindings = &matricesLayoutBinding;
+			
+			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerObject]) != VK_SUCCESS)
+				throw ResourceCreationException("Failed to create descriptor set layout");
+		}
+		// per object
+		{
+			VkDescriptorSetLayoutBinding albedoLayoutBinding{};
+			albedoLayoutBinding.binding = 0;
+			albedoLayoutBinding.descriptorCount = 1;
+			albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = 1;
+			layoutInfo.pBindings = &albedoLayoutBinding;
+			
+			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerMaterial]) != VK_SUCCESS)
+				throw ResourceCreationException("Failed to create descriptor set layout");
+		}
 	}
 }

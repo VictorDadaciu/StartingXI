@@ -17,6 +17,7 @@ namespace sxi::renderer::detail
 		VkSurfaceFormatKHR surfaceFormat{};
 		VkExtent2D extent{};
         VkPresentModeKHR presentMode{};
+		std::vector<VkSemaphore> renderFinishedSemaphores{};
 
         Swapchain(SDL_Window*, const VkSurfaceKHR&);
         ~Swapchain();
