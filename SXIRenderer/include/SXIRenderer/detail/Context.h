@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Renderer2.h>
+#include "Renderer.h"
 
 #include <vulkan/vulkan.h>
 
@@ -8,6 +8,7 @@
 #include <array>
 #include <unordered_map>
 
+#include "SXICore/Timing.h"
 #include "SXICore/Types.h"
 
 namespace sxi::renderer::detail
@@ -17,6 +18,7 @@ namespace sxi::renderer::detail
 	struct FrameContext
 	{
 		VkCommandPool commandPool{};
+		VkCommandBuffer commandBuffer{};
 		VkSemaphore imageAvailableSemaphore{};
 		VkFence inFlightFence{};
 
@@ -25,6 +27,7 @@ namespace sxi::renderer::detail
 
 	private:
 		void createCommandPool(const VkDevice&, u8);
+		void createCommandBuffer(const VkDevice&);
 		void createSyncObjects(const VkDevice&);
 	};
 
@@ -56,7 +59,7 @@ namespace sxi::renderer::detail
 	enum DescriptorSetType
 	{
 		PerFrame = 0,
-		PerMaterial = 1,
+		PerModel = 1,
 		PerObject = 2,
 		Count = 3
 	};
@@ -79,13 +82,15 @@ namespace sxi::renderer::detail
 		VkDescriptorPool descriptorPool{};
 		std::array<VkDescriptorSetLayout, DescriptorSetType::Count> descriptorSetLayouts{};
 
-		std::array<FrameContext*, MAX_FRAMES_IN_FLIGHT> frameContexts{};
-
 		Context(const VkInstance&, const VkSurfaceKHR&, const std::vector<const char*>&);
 		~Context();
 
 		inline const PhysicalDevice& currentPhysicalDevice() const { return physicalDevices[currentPhysicalDeviceIndex]; }
-		inline const FrameContext* currentFrameContext() const { return frameContexts[currentFrame]; }
+		inline const FrameContext* currentFrameContext() const { return frameContexts[currentFrameIndex]; }
+		inline const FrameContext* lastFrameContext() const { return frameContexts[lastFrameIndex]; }
+
+		inline u8 currentFrame() const { return currentFrameIndex; }
+		inline u8 lastFrame() const { return lastFrameIndex; }
 
 	private:
 		void enumeratePhysicalDevices(const VkSurfaceKHR&);
@@ -95,11 +100,18 @@ namespace sxi::renderer::detail
 		void createDescriptorPool();
 		void createDescriptorSetLayouts();
 
-		inline void nextFrame() { currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT; }
+		inline void advanceFrame() 
+		{
+			lastFrameIndex = currentFrameIndex;
+			currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT; 
+		}
 
 		size_t currentPhysicalDeviceIndex{};
-		u8 currentFrame{};
+		u8 currentFrameIndex{};
+		u8 lastFrameIndex = MAX_FRAMES_IN_FLIGHT - 1;
 
-		friend void sxi::renderer::render();
+		std::array<FrameContext*, MAX_FRAMES_IN_FLIGHT> frameContexts{};
+
+		friend void sxi::renderer::render(const Time&);
 	} *context;
 }

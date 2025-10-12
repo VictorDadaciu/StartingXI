@@ -10,7 +10,7 @@
 #include "SXIMath/Vec.h"
 #include "SXICore/Types.h"
 
-namespace sxi
+namespace sxi::renderer
 {
 	struct Vertex
 	{
@@ -48,33 +48,30 @@ namespace sxi
 		inline bool operator==(const Vertex& other) const { return pos == other.pos && norm == other.norm && uv == other.uv; }
 	};
 
-	class Model
+	struct Model
 	{
-	public:
-		Model(const std::string&, Texture*);
+		std::vector<Vertex> verts{};
+		VkDeviceSize vertexBufferOffset{};
+		std::vector<u32> indices{};
+		VkDeviceSize indexBufferOffset{};
+
+		Model(const std::string&);
 
 		Model(Model&) = delete;
 		Model(Model&&) = default;
 
 		Model& operator=(Model&) = delete;
 		Model& operator=(Model&&) = default;
-
-		inline const Texture* texture() const { return tex; }
-		inline const std::vector<Vertex>& vertices() const { return verts; }
-		inline const std::vector<u32>& indices() const { return indis; }
-
-	private:
-		std::vector<Vertex> verts{};
-		std::vector<u32> indis{};
-		Texture* tex{};
 	};
+
+    extern Model* model;
 }
 
 namespace std
 {
-	template<> struct hash<sxi::Vertex>
+	template<> struct hash<sxi::renderer::Vertex>
 	{
-		size_t operator()(const sxi::Vertex& vertex) const
+		size_t operator()(const sxi::renderer::Vertex& vertex) const
 		{
 			return ((hash<glm::vec3>()(vertex.pos) ^
 					 (hash<glm::vec3>()(vertex.norm) << 1)) >> 1) ^

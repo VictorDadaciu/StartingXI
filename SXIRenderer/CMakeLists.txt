@@ -7,21 +7,23 @@ project(SXIRenderer VERSION 1.0
 add_library(${PROJECT_NAME} STATIC
             src/Model.cpp
             src/Renderer.cpp
-            src/Renderer2.cpp
             src/Texture.cpp
-            src/Window.cpp
+            src/Scene.cpp
             src/detail/Context.cpp
-            src/detail/Window2.cpp
+            src/detail/Window.cpp
             src/detail/RenderPass.cpp
+            src/detail/GraphicsPipeline.cpp
+            src/detail/Buffer.cpp
             src/detail/Utils.cpp
             include/${PROJECT_NAME}/Model.h
             include/${PROJECT_NAME}/Renderer.h
-            include/${PROJECT_NAME}/Renderer2.h
             include/${PROJECT_NAME}/Texture.h
-            include/${PROJECT_NAME}/Window.h
+            include/${PROJECT_NAME}/Scene.h
             include/${PROJECT_NAME}/detail/Context.h
-            include/${PROJECT_NAME}/detail/Window2.h
+            include/${PROJECT_NAME}/detail/Window.h
             include/${PROJECT_NAME}/detail/RenderPass.h
+            include/${PROJECT_NAME}/detail/GraphicsPipeline.h
+            include/${PROJECT_NAME}/detail/Buffer.h
             include/${PROJECT_NAME}/detail/Utils.h)
 
 target_link_libraries(${PROJECT_NAME}

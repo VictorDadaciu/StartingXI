@@ -6,9 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "SXIRenderer/Renderer2.h"
-#include "SXIRenderer/Window.h"
-#include "SXIRenderer/Model.h"
+#include "SXIRenderer/Renderer.h"
 #include "SXICore/File.h"
 #include "SXICore/Timing.h"
 
@@ -16,9 +14,6 @@ const std::string MODELS_PATH = "../../MysteriousGame/models/";
 const std::string TEXTURES_PATH = "../../MysteriousGame/textures/";
 const std::string SHADERS_PATH = "../../MysteriousGame/shaders/";
 const std::string SHADERS_GEN_PATH = "../../MysteriousGame/shaders/generated/";
-
-static sxi::Texture texture(TEXTURES_PATH + "chair_basecolor.png");
-static sxi::Model model(MODELS_PATH + "Rocking_Chair.obj", &texture);
 
 static void loop()
 {
@@ -49,6 +44,7 @@ static void loop()
 		// if (!minimized)
 		// 	renderer->render(time);
 
+		sxi::renderer::render(time);
 		time.refresh();
 	}
 }
@@ -56,6 +52,11 @@ static void loop()
 int main(int argc, char* args[])
 {
 	sxi::renderer::init(1600, 900);
+	sxi::renderer::addGraphicsPipeline(
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
+	sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
+	sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
 	loop();
 	sxi::renderer::destroy();
 	return 0;

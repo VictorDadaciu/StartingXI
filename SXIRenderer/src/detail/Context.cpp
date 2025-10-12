@@ -22,6 +22,7 @@ namespace sxi::renderer::detail
 	FrameContext::FrameContext(const VkDevice& logicalDevice, u8 graphicsQueueFamilyIndex)
 	{
 		createCommandPool(logicalDevice, graphicsQueueFamilyIndex);
+		createCommandBuffer(logicalDevice);
 		createSyncObjects(logicalDevice);
 	}
 
@@ -42,6 +43,18 @@ namespace sxi::renderer::detail
 
 		if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
 			throw ResourceCreationException("Failed to create command pool");
+	}
+
+	void FrameContext::createCommandBuffer(const VkDevice& logicalDevice)
+	{
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = commandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer) != VK_SUCCESS)
+			throw ResourceCreationException("Failed to allocate command buffers");
 	}
 
 	void FrameContext::createSyncObjects(const VkDevice& logicalDevice)
@@ -319,7 +332,7 @@ namespace sxi::renderer::detail
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = 1000;
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 2;
+		poolSizes[1].descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -356,7 +369,23 @@ namespace sxi::renderer::detail
 			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerFrame]) != VK_SUCCESS)
 				throw ResourceCreationException("Failed to create descriptor set layout");
 		}
-		// per material
+		// per model
+		{
+			VkDescriptorSetLayoutBinding albedoLayoutBinding{};
+			albedoLayoutBinding.binding = 0;
+			albedoLayoutBinding.descriptorCount = 1;
+			albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			
+			VkDescriptorSetLayoutCreateInfo layoutInfo{};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = 1;
+			layoutInfo.pBindings = &albedoLayoutBinding;
+			
+			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerModel]) != VK_SUCCESS)
+				throw ResourceCreationException("Failed to create descriptor set layout");
+		}
+		// per object
 		{
 			VkDescriptorSetLayoutBinding matricesLayoutBinding{};
 			matricesLayoutBinding.binding = 0;
@@ -370,22 +399,6 @@ namespace sxi::renderer::detail
 			layoutInfo.pBindings = &matricesLayoutBinding;
 			
 			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerObject]) != VK_SUCCESS)
-				throw ResourceCreationException("Failed to create descriptor set layout");
-		}
-		// per object
-		{
-			VkDescriptorSetLayoutBinding albedoLayoutBinding{};
-			albedoLayoutBinding.binding = 0;
-			albedoLayoutBinding.descriptorCount = 1;
-			albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			
-			VkDescriptorSetLayoutCreateInfo layoutInfo{};
-			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			layoutInfo.bindingCount = 1;
-			layoutInfo.pBindings = &albedoLayoutBinding;
-			
-			if (vkCreateDescriptorSetLayout(logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerMaterial]) != VK_SUCCESS)
 				throw ResourceCreationException("Failed to create descriptor set layout");
 		}
 	}

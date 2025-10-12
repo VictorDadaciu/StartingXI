@@ -8,7 +8,7 @@ namespace sxi::renderer::detail
 {
     struct RenderPass
     {
-        VkRenderPass basic{};
+        VkRenderPass pass{};
 		VkImage colorImage{};
 		VkDeviceMemory colorImageMem{};
 		VkImageView colorImageView{};
@@ -25,5 +25,5 @@ namespace sxi::renderer::detail
         void createResources();
         void createFrameBuffers();
     };
-    extern RenderPass* renderPass;
+    extern RenderPass* basicRenderPass;
 }

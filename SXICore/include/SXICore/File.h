@@ -3,11 +3,8 @@
 #include <vector>
 #include <string>
 
-namespace sxi
+namespace sxi::file
 {
-	namespace file
-	{
-		std::vector<char> readFileAsBytes(const std::string&);
-	}
+	std::vector<char> readFileAsBytes(const std::string&);
 }
 

@@ -1,16 +1,18 @@
 #include "Model.h"
+#include "Texture.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
-#include <stdexcept>
 #include <unordered_map>
 
-#include "Texture.h"
+#include "SXICore/Exception.h"
 
-namespace sxi
+namespace sxi::renderer
 {
-	Model::Model(const std::string& path, Texture* tex) : tex(tex)
+    Model* model{};
+
+	Model::Model(const std::string& path)
 	{
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
@@ -57,7 +59,7 @@ namespace sxi
                     verts.push_back(std::move(vertex));
                 }
 
-                indis.push_back(uniqueVerts[vertex]);
+                indices.push_back(uniqueVerts[vertex]);
             }
         }
 	}

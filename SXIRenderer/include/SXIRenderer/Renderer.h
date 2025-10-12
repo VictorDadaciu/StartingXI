@@ -1,159 +1,62 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <vector>
-#include <optional>
-#include "SXIMath/Vec.h"
-#include "SXIMath/Mat.h"
-#include "SXICore/Timing.h"
-#include "SXICore/Types.h"
+#include <string>
 
-namespace sxi
+#include <SXICore/Timing.h>
+#include <SXICore/Types.h>
+
+namespace sxi::renderer
 {
-	struct PushConstants {
-		alignas(16) glm::vec3 lightPos;
-	};
+    /**
+     * @brief Initializes the renderer.
+     * 
+     * Must be destroyed before program end. Cannot be called more than once before
+     * being destroyed.
+     * 
+     * @param uint32_t width: width of the window
+     * @param uint32_t height: height of the window
+     * @param bool releaseValidationLayers(=false): By default, validation layers are
+     * 												disabled on release builds, set
+     * 												this to true to force enable.
+     */
+    void init(u32, u32, bool=false);
 
-	struct QueueFamilyIndices
-	{
-		std::optional<u32> graphicsFamily;
-		std::optional<u32> presentFamily;
+    /**
+     * @brief Pass in SPIRV shader code to construct graphics pipeline.
+     * 
+     * @param const std::vector<char>& vertCode: Bytes representing the contents of 
+     *                                           the vertex shader of the desired
+     *                                           pipeline.
+     * @param const std::vector<char>& fragCode: Bytes representing the contents of 
+     *                                           the fragment shader of the desired
+     *                                           pipeline.
+     */
+    void addGraphicsPipeline(const std::vector<char>&, const std::vector<char>&);
 
-		inline bool isComplete() const { return graphicsFamily.has_value() && presentFamily.has_value(); }
-	};
+    /**
+     * @brief Pass in path to image to create a texture for models
+     * 
+     * @param const std::string& path: Path to an image file.
+     */
+    void addTexture(const std::string&);
 
-	struct SwapChainSupportDetails
-	{
-		VkSurfaceCapabilitiesKHR capabilities{};
-		std::vector<VkSurfaceFormatKHR> formats{};
-		std::vector<VkPresentModeKHR> presentModes{};
-	};
-	
-	struct UniformBufferObject {
-		alignas(16) glm::mat4 model;
-		alignas(16) glm::mat4 view;
-		alignas(16) glm::mat4 proj;
-	};
+    /**
+     * @brief Pass in path to obj file to create a model
+     * 
+     * @param const std::string& path: Path to an obj file.
+     */
+    void addModel(const std::string&);
 
-	class Model;
-	class Window;
-	class Renderer
-	{
-	public:
-		Renderer(std::vector<const char*>&& extensions);
-	
-		void initialize(Window*, std::vector<char>&&, std::vector<char>&&, Model*);
-		inline const VkInstance vkInstance() const { return instance; }
-		void render(const Time&);
-		void cleanup() const;
-	
-		~Renderer() = default;
-	
-		Renderer(const Renderer&) = delete;
-		void operator=(const Renderer&) = delete;
-	
-	private:
-		void createInstance(std::vector<const char*>&&);
-		void setupDebugCallback() const;
-		void choosePhysicalDevice();
-		void createLogicalDevice();
-		void createSwapChain();
-		void createImageViews();
-		void createRenderPass();
-		void createDescriptorSetLayout();
-		void createGraphicsPipeline(std::vector<char>&&, std::vector<char>&&);
-		void createFrameBuffers();
-		void createCommandPool();
-		void createColorResources();
-		void createDepthResources();
-		void createTextureImage();
-		void createTextureImageView();
-		void createTextureImageSampler();
-		void createVertexBuffer();
-		void createIndexBuffer();
-		void createUniformBuffers();
-		void createDescriptorPool();
-		void createDescriptorSets();
-		void createCommandBuffer();
-		void createSyncObjects();
+    /**
+     * @brief Renders the frame to the screen.
+     * 
+     * Must be called only once per frame.
+     */
+    void render(const Time& time);
 
-		void updateUniformBuffers(const Time&, u32);
-		void recordCommandBuffer(VkCommandBuffer, u32, u32);
-		void recreateSwapChain();
-		void cleanupSwapChain() const;
-
-		QueueFamilyIndices findQueueFamilies(const VkPhysicalDevice) const;
-		int physicalDeviceScore(const VkPhysicalDevice) const;
-		SwapChainSupportDetails querySwapChainSupport(const VkPhysicalDevice) const;
-		VkSurfaceFormatKHR chooseSwapChainSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&) const;
-		VkPresentModeKHR chooseSwapChainPresentMode(const std::vector<VkPresentModeKHR>&) const;
-		VkExtent2D chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR&) const;
-		VkShaderModule createShaderModule(std::vector<char>&&) const;
-		u32 findMemoryType(u32, VkMemoryPropertyFlags) const;
-		void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
-		void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize) const;
-		void createImage(u32, u32, u32, VkSampleCountFlagBits, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage&, VkDeviceMemory&);
-		VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags, u32) const;
-		void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout, u32);
-		void copyBufferToImage(VkBuffer, VkImage, u32, u32);
-		VkFormat findSupportedFormat(const std::vector<VkFormat>&, VkImageTiling, VkFormatFeatureFlags) const;
-		VkFormat findDepthFormat() const;
-		void generateMipmaps(VkImage, VkFormat, i32, i32, u32);
-		VkSampleCountFlagBits getMaxUsableSampleCount() const;
-
-		VkCommandBuffer beginSingleTimeCommands() const;
-		void endSingleTimeCommands(VkCommandBuffer) const;
-	
-		Window* window = nullptr;
-
-		VkInstance instance{};
-		VkSurfaceKHR surface{};
-		VkPhysicalDevice physicalDevice{};
-		VkDevice logicalDevice{};
-		VkSwapchainKHR swapChain{};
-		std::vector<VkImage> swapChainImages{};
-		std::vector<VkImageView> swapChainImageViews{};
-		VkFormat swapChainImageFormat{};
-		VkExtent2D swapChainExtent{};
-		VkRenderPass renderPass{};
-		VkPipelineLayout pipelineLayout{};
-		VkDescriptorSetLayout descriptorSetLayout;
-		VkDescriptorPool descriptorPool;
-		std::vector<VkDescriptorSet> descriptorSets;
-		std::vector<VkBuffer> uniformBuffers;
-		std::vector<VkDeviceMemory> uniformBuffersMem;
-		std::vector<void*> uniformBuffersMapped;
-		VkPipeline graphicsPipeline{};
-		std::vector<VkFramebuffer> swapChainFrameBuffers{};
-		VkCommandPool commandPool{};
-		VkImage textureImage;
-		VkDeviceMemory textureImageMem;
-		VkImageView textureImageView;
-		VkSampler textureSampler;
-		VkImage colorImage;
-		VkDeviceMemory colorImageMem;
-		VkImageView colorImageView;
-		VkImage depthImage;
-		VkDeviceMemory depthImageMem;
-		VkImageView depthImageView;
-		VkBuffer vertexBuffer{};
-		VkDeviceMemory vertexBufferMem{};
-		VkBuffer indexBuffer{};
-		VkDeviceMemory indexBufferMem{};
-		std::vector<VkCommandBuffer> commandBuffers{};
-		std::vector<VkSemaphore> imageAvailableSemaphores{};
-		std::vector<VkSemaphore> renderFinishedSemaphores{};
-		std::vector<VkFence> inFlightFences{};
-		VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkQueue graphicsQueue{};
-		VkQueue presentQueue{};
-
-		Model* model;
-		std::array<glm::vec3, 2> lightPos{};
-
-		VkPhysicalDeviceFeatures deviceFeatures{};
-		bool initialized = false;
-	};
+    /**
+     * @brief Destroys the renderer and all associated data.
+     */
+    void destroy();
 }
-

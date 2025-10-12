@@ -1,7 +1,7 @@
 #include "detail/RenderPass.h"
 
 #include "detail/Context.h"
-#include "detail/Window2.h"
+#include "detail/Window.h"
 #include "detail/Utils.h"
 
 #include <iostream>
@@ -10,7 +10,7 @@
 
 namespace sxi::renderer::detail
 {
-    RenderPass* renderPass{};
+    RenderPass* basicRenderPass{};
 
     RenderPass::RenderPass()
     {
@@ -32,7 +32,7 @@ namespace sxi::renderer::detail
 		for (const VkFramebuffer& framebuffer : frameBuffers)
 			vkDestroyFramebuffer(context->logicalDevice, framebuffer, nullptr);
 
-        vkDestroyRenderPass(context->logicalDevice, basic, nullptr);
+        vkDestroyRenderPass(context->logicalDevice, pass, nullptr);
     }
 
 	void RenderPass::createRenderPass()
@@ -110,7 +110,7 @@ namespace sxi::renderer::detail
 		renderPassInfo.dependencyCount = 1;
 		renderPassInfo.pDependencies = &dependency;
 
-		if (vkCreateRenderPass(context->logicalDevice, &renderPassInfo, nullptr, &basic) != VK_SUCCESS)
+		if (vkCreateRenderPass(context->logicalDevice, &renderPassInfo, nullptr, &pass) != VK_SUCCESS)
 			throw ResourceCreationException("Failed to create render pass");
 	}
 
@@ -171,7 +171,7 @@ namespace sxi::renderer::detail
 
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = basic;
+			framebufferInfo.renderPass = pass;
 			framebufferInfo.attachmentCount = SXI_TO_U32(attachments.size());
 			framebufferInfo.pAttachments = attachments.data();
 			framebufferInfo.width = extent.width;
