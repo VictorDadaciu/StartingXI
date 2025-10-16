@@ -9,57 +9,48 @@ namespace sxi::renderer
 {
     Scene* scene{};
 
-    SceneData::SceneData(u8 numObjects, u8 frame)
+    SceneData::SceneData(u8 numObjects, u8 frame) : frame(frame)
     {
-        lightPos = glm::vec4(0.f, 20.f, 50.f, 1.f);
-        createFrameDescriptorSet(frame);
-
-        rotations.resize(numObjects, 0.f);
-        objectUBOs.resize(numObjects);
         objectDescriptorSets.resize(numObjects);
-        createObjectDescriptorSets(frame);
-
-        FrameUBO frameUBO{};
-        frameUBO.view = glm::lookAt(glm::vec3(50.f, 50.f, -50.f), glm::vec3(0.f, 20.f, 0.f), SXI_VEC3_UP);
-        frameUBO.proj = glm::perspective(glm::radians(60.0f), detail::window->swapchain->extent.width / (float) detail::window->swapchain->extent.height, 0.1f, 10000.0f);
-		frameUBO.proj[1][1] *= -1;
-        memcpy(detail::uniformBuffers[frame].mapped, &frameUBO, sizeof(FrameUBO));
+        createFrameDescriptorSet();
+        createObjectDescriptorSets();
     }
 
-    void SceneData::moveLight(const Time& time)
+    void Scene::moveLight(const Time& time)
     {
         static TimePoint start = time.time;
-		float timePassed = Time::elapsed(time.time, start);
+		float timePassed = -Time::elapsed(time.time, start);
 
-        lightPos = glm::vec3(50.f * std::sinf(timePassed), 20, 50.f * std::cosf(timePassed));
+        lightPos = glm::vec3(100.f * std::sinf(timePassed), 30, 100.f * std::cosf(timePassed));
     }
 
-    void SceneData::rotateObjects(const Time& time)
+    void Scene::rotateObjects(const Time& time)
     {
         for (float& rotation : rotations)
             rotation += 0.1f * time.dt;
     }
 
-    void SceneData::begin(const SceneData* lastFrameSceneData)
-    {
-        lightPos = lastFrameSceneData->lightPos;
-        rotations = lastFrameSceneData->rotations;
-    }
-
-    void SceneData::finalize()
+    void Scene::finalize()
     {
         u8 currentFrame = detail::context->currentFrame();
+        char* offset = (char*)detail::uniformBuffers[currentFrame].mapped;
+        
+        frameUBO.view = glm::lookAt(glm::vec3(0.f, 50.f, -75.f), glm::vec3(0.f, 20.f, 0.f), SXI_VEC3_UP);
+        frameUBO.proj = glm::perspective(glm::radians(60.0f), detail::window->swapchain->extent.width / (float) detail::window->swapchain->extent.height, 0.1f, 10000.0f);
+		frameUBO.proj[1][1] *= -1;
+        memcpy(offset, &frameUBO, sizeof(FrameUBO));
 
         frameLight = FrameLight{ glm::vec4(lightPos.x, lightPos.y, lightPos.z, 1.f) };
-        memcpy((char*)detail::uniformBuffers[currentFrame].mapped + sizeof(FrameUBO), &frameLight, sizeof(FrameLight));
+        offset += sizeof(FrameUBO);
+        memcpy(offset, &frameLight, sizeof(FrameLight));
 
-        static auto offset = sizeof(FrameUBO) + sizeof(FrameLight);
         for (size_t i = 0; i < rotations.size(); ++i)
-            objectUBOs[i].model = glm::rotate(glm::mat4(1.0f), rotations[i] * glm::radians(-90.f), SXI_VEC3_UP);
-        memcpy((char*)detail::uniformBuffers[currentFrame].mapped + offset, objectUBOs.data(), objectUBOs.size() * sizeof(ObjectUBO));
+            objectUBOs[i].model = glm::rotate(glm::translate(glm::mat4(1.0f), translations[i]), -rotations[i], SXI_VEC3_UP);
+        offset += sizeof(FrameLight);
+        memcpy(offset, objectUBOs.data(), objectUBOs.size() * sizeof(ObjectUBO));
     }
 
-    void SceneData::createFrameDescriptorSet(u8 frame)
+    void SceneData::createFrameDescriptorSet()
     {
         VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -102,13 +93,16 @@ namespace sxi::renderer
         vkUpdateDescriptorSets(detail::context->logicalDevice, SXI_TO_U32(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
-    void SceneData::createObjectDescriptorSets(u8 frame)
+    void SceneData::createObjectDescriptorSets()
     {
+        std::vector<VkDescriptorSetLayout> pSetLayouts(objectDescriptorSets.size(),
+            detail::context->descriptorSetLayouts[detail::DescriptorSetType::PerObject]);
+
         VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = detail::context->descriptorPool;
 		allocInfo.descriptorSetCount = SXI_TO_U32(objectDescriptorSets.size());
-		allocInfo.pSetLayouts = &detail::context->descriptorSetLayouts[detail::DescriptorSetType::PerObject];
+		allocInfo.pSetLayouts = pSetLayouts.data();
 
         if (vkAllocateDescriptorSets(detail::context->logicalDevice, &allocInfo, objectDescriptorSets.data()) != VK_SUCCESS)
 			throw MemoryAllocationException("Failed to allocate descriptor sets");
@@ -119,39 +113,38 @@ namespace sxi::renderer
             uboInfo.buffer = detail::uniformBuffers[frame].buffer;
             uboInfo.offset = detail::uniformBuffers[frame].offset;
             uboInfo.range = sizeof(ObjectUBO);
-            detail::uniformBuffers[frame].offset += sizeof(ObjectUBO);
+            detail::uniformBuffers[frame].offset += uboInfo.range;
 
-            VkWriteDescriptorSet descriptorWrite{};
-            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorWrite.dstSet = objectDescriptorSets[i];
-            descriptorWrite.dstBinding = 0;
-            descriptorWrite.dstArrayElement = 0;
-            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            descriptorWrite.descriptorCount = 1;
-            descriptorWrite.pBufferInfo = &uboInfo;
+            VkWriteDescriptorSet writeDescriptorSet{};
+            writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writeDescriptorSet.dstSet = objectDescriptorSets[i];
+            writeDescriptorSet.dstBinding = 0;
+            writeDescriptorSet.dstArrayElement = 0;
+            writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            writeDescriptorSet.descriptorCount = 1;
+            writeDescriptorSet.pBufferInfo = &uboInfo;
 
-            vkUpdateDescriptorSets(detail::context->logicalDevice, 1, &descriptorWrite, 0, nullptr);
+            vkUpdateDescriptorSets(detail::context->logicalDevice, 1, &writeDescriptorSet, 0, nullptr);
         }
+
     }
 
     Scene::Scene(u8 numObjects)
     {
+        lightPos = glm::vec4(0.f, 30.f, 100.f, 1.f);
+        translations.resize(numObjects);
+        for (size_t i = 0; i < numObjects; ++i)
+            translations[i] = glm::vec3(-30.f + i * 60.f, 0.f, 0.f);
+        rotations.resize(numObjects, 0.f);
+        objectUBOs.resize(numObjects);
         for (size_t i = 0; i < sceneDatas.size(); ++i)
-            sceneDatas[i] = new SceneData(numObjects, SXI_TO_U8(i));
-    }
-
-    Scene::~Scene()
-    {
-        for (SceneData* sceneData : sceneDatas)
-            delete sceneData;
+            sceneDatas[i] = SceneData(numObjects, SXI_TO_U8(i));
     }
 
     void Scene::run(const Time& time)
     {
-        SceneData* currentSceneData = sceneDatas[detail::context->currentFrame()];
-        currentSceneData->begin(sceneDatas[detail::context->lastFrame()]);
-        currentSceneData->moveLight(time);
-        currentSceneData->rotateObjects(time);
-        currentSceneData->finalize();
+        moveLight(time);
+        rotateObjects(time);
+        finalize();
     }
 }

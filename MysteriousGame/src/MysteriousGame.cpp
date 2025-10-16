@@ -56,7 +56,9 @@ int main(int argc, char* args[])
 		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
 		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
 	sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
+	sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
 	sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
+	sxi::renderer::addModel(MODELS_PATH + "Rocking_Chair.obj");
 	loop();
 	sxi::renderer::destroy();
 	return 0;

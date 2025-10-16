@@ -64,7 +64,7 @@ namespace sxi::renderer
 		Model& operator=(Model&&) = default;
 	};
 
-    extern Model* model;
+    extern std::vector<Model*> models;
 }
 
 namespace std

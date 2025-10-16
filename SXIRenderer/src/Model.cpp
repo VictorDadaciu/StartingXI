@@ -10,7 +10,7 @@
 
 namespace sxi::renderer
 {
-    Model* model{};
+    std::vector<Model*> models{};
 
 	Model::Model(const std::string& path)
 	{

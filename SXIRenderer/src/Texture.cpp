@@ -14,7 +14,7 @@
 
 namespace sxi::renderer
 {
-    Texture* tex{};
+    std::vector<Texture*> textures{};
 
     using namespace detail;
 

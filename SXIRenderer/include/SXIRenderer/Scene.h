@@ -32,39 +32,41 @@ namespace sxi::renderer
         VkDescriptorSet frameDescriptorSet{};
         std::vector<VkDescriptorSet> objectDescriptorSets{};
 
+        SceneData() = default;
         SceneData(u8, u8);
 
+    private:
+        void createFrameDescriptorSet();
+        void createObjectDescriptorSets();
+    
+        u8 frame{};
+    
+        friend Scene;
+};
+
+class Scene
+{
+    public:
+        Scene(u8);
+        ~Scene() = default;
+    
+        void run(const Time&);
+
+        inline const SceneData& currentSceneData() const { return sceneDatas[detail::context->currentFrame()]; }
+    private:
         void moveLight(const Time&);
         void rotateObjects(const Time&);
-
-    private:
-        void begin(const SceneData*);
         void finalize();
 
-        void createFrameDescriptorSet(u8);
-        void createObjectDescriptorSets(u8);
-
         std::vector<float> rotations{};
+        std::vector<glm::vec3> translations{};
         glm::vec3 lightPos{};
 
         FrameLight frameLight{};
         FrameUBO frameUBO{};
         std::vector<ObjectUBO> objectUBOs{};
 
-        friend Scene;
-    };
-
-    class Scene
-    {
-    public:
-        Scene(u8);
-        ~Scene();
-
-        void run(const Time&);
-
-        inline const SceneData* currentSceneData() const { return sceneDatas[detail::context->currentFrame()]; }
-    private:
-        std::array<SceneData*, detail::MAX_FRAMES_IN_FLIGHT> sceneDatas{};
+        std::array<SceneData, detail::MAX_FRAMES_IN_FLIGHT> sceneDatas;
     };
 
     extern Scene* scene;

@@ -189,9 +189,7 @@ namespace sxi::renderer
 		detail::vertexBuffer = new detail::VertexBuffer();
 		detail::indexBuffer = new detail::IndexBuffer();
 		detail::uniformBuffers = new detail::UniformBuffer[MAX_FRAMES_IN_FLIGHT];
-		tex = nullptr;
-		model = nullptr;
-		scene = new Scene(1);
+		scene = new Scene(2);
 
 		initialized = true;
 	}
@@ -203,12 +201,12 @@ namespace sxi::renderer
 
 	void addTexture(const std::string& path)
 	{
-		tex = new Texture(path);
+		textures.push_back(new Texture(path));
 	}
 
 	void addModel(const std::string& path)
 	{
-		model = new Model(path);
+		Model* model = new Model(path);
 		// add to vertex buffer
 		{
 			const std::vector<Vertex>& verts = model->verts;
@@ -251,6 +249,7 @@ namespace sxi::renderer
 			vkDestroyBuffer(detail::context->logicalDevice, stagingBuffer, nullptr);
 			vkFreeMemory(detail::context->logicalDevice, stagingBufferMem, nullptr);
 		}
+		models.push_back(model);
 	}
 
 	void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex, u32 currentFrame)
@@ -292,17 +291,39 @@ namespace sxi::renderer
 		scissor.extent = detail::window->swapchain->extent;
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+		const SceneData& sceneData = scene->currentSceneData();
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			detail::basicLightingPipeline->layout,
+			detail::DescriptorSetType::PerFrame, 1,
+			&sceneData.frameDescriptorSet, 0, nullptr);
+
 		VkBuffer vertexBuffers[] = { detail::vertexBuffer->buffer };
-		VkDeviceSize offsets[] = { model->vertexBufferOffset };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-		vkCmdBindIndexBuffer(commandBuffer, detail::indexBuffer->buffer, model->indexBufferOffset, VK_INDEX_TYPE_UINT32);
+		for (size_t modelIndex = 0; modelIndex < models.size(); modelIndex++)
+		{
+			Model* model = models[modelIndex];
+			VkDeviceSize offsets[] = { model->vertexBufferOffset };
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+			
+			vkCmdBindIndexBuffer(commandBuffer, detail::indexBuffer->buffer, model->indexBufferOffset, VK_INDEX_TYPE_UINT32);
+			vkCmdBindDescriptorSets(
+				commandBuffer,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				detail::basicLightingPipeline->layout,
+				detail::DescriptorSetType::PerModel, 1,
+				&textures[modelIndex]->descriptorSet, 0, nullptr);
 
-		const SceneData* sceneData = scene->currentSceneData();
-		std::array<VkDescriptorSet, 3> descriptorSets{ sceneData->frameDescriptorSet, tex->descriptorSet, *sceneData->objectDescriptorSets.data() };
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, detail::basicLightingPipeline->layout, 0, SXI_TO_U32(descriptorSets.size()), descriptorSets.data(), 0, nullptr);
-
-		vkCmdDrawIndexed(commandBuffer, SXI_TO_U32(model->indices.size()), 1, 0, 0, 0);
+			vkCmdBindDescriptorSets(
+				commandBuffer,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				detail::basicLightingPipeline->layout,
+				detail::DescriptorSetType::PerObject, 1,
+				&sceneData.objectDescriptorSets[modelIndex], 0, nullptr);
+				
+			vkCmdDrawIndexed(commandBuffer, SXI_TO_U32(model->indices.size()), 1, 0, 0, 0);	
+		}
 
 		vkCmdEndRenderPass(commandBuffer);
 
@@ -369,9 +390,9 @@ namespace sxi::renderer
 		
 		vkDeviceWaitIdle(detail::context->logicalDevice);
 		
-		if (tex)
+		for (Texture* tex : textures)
 			delete tex;
-		if (model)
+		for (Model* model : models)
 			delete model;
 		delete detail::vertexBuffer;
 		delete detail::indexBuffer;

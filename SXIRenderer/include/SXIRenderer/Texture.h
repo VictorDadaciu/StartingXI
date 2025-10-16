@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vector>
 #include <string>
 
 #include "SXICore/Types.h"
@@ -36,5 +37,5 @@ namespace sxi::renderer
         void createVkResources();
 	};
 
-    extern Texture* tex;
+    extern std::vector<Texture*> textures;
 }
