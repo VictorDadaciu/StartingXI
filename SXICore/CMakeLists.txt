@@ -7,6 +7,8 @@ project(SXICore VERSION 1.0
 add_library(${PROJECT_NAME} STATIC
             src/File.cpp
             src/Timing.cpp
+            include/${PROJECT_NAME}/MPL.h
+            include/${PROJECT_NAME}/ECS.h
             include/${PROJECT_NAME}/Exception.h
             include/${PROJECT_NAME}/File.h
             include/${PROJECT_NAME}/Timing.h

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15..4.0)
 
-set (CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20)
 
 project(StartingXI VERSION 1.0
                    DESCRIPTION "C++ game engine running on Vulkan"
@@ -8,7 +8,6 @@ project(StartingXI VERSION 1.0
 
 include(FetchContent)
 
-# Find dependencies or git clone them
 # Vulkan
 find_package(Vulkan REQUIRED)
 

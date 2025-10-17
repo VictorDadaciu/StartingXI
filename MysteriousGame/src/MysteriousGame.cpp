@@ -9,6 +9,7 @@
 #include "SXIRenderer/Renderer.h"
 #include "SXICore/File.h"
 #include "SXICore/Timing.h"
+#include "SXICore/ECS.h"
 
 const std::string MODELS_PATH = "../../MysteriousGame/models/";
 const std::string TEXTURES_PATH = "../../MysteriousGame/textures/";
@@ -51,15 +52,21 @@ static void loop()
 
 int main(int argc, char* args[])
 {
-	sxi::renderer::init(1600, 900);
-	sxi::renderer::addGraphicsPipeline(
-		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
-		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
-	sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
-	sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
-	sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
-	sxi::renderer::addModel(MODELS_PATH + "Rocking_Chair.obj");
-	loop();
-	sxi::renderer::destroy();
+	// sxi::renderer::init(1600, 900);
+	// sxi::renderer::addGraphicsPipeline(
+	// 	sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
+	// 	sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
+	// sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
+	// sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
+	// sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
+	// sxi::renderer::addModel(MODELS_PATH + "Rocking_Chair.obj");
+	// loop();
+	// sxi::renderer::destroy();
+
+	using short_bool_string_type = sxi::mpl::typelist<short, bool, std::string>;
+	std::cout << sxi::mpl::Contains<uint64_t, short_bool_string_type>::value << "\n";
+	std::cout << sxi::mpl::IndexOf<std::string, short_bool_string_type>::value << "\n";
+	std::cout << sxi::mpl::Count<short_bool_string_type>::value << "\n";
+
 	return 0;
 }
