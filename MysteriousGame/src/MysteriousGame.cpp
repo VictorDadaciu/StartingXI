@@ -84,60 +84,173 @@ using Components = ComponentList<PositionComponent, RenderComponent>;
 using Soldier = Archetype<PositionComponent>;
 using Tank = Archetype<PositionComponent, RenderComponent>;
 using Archetypes = ArchetypeList<Soldier, Tank>;
+	
+namespace detail
+{
+	template <typename TArchetype>
+	class ArchetypeStorage;
+
+	template <typename TArchetype>
+	struct EntityIndex
+	{
+	private:
+		size_t index;
+
+		friend class ArchetypeStorage<TArchetype>;
+		friend class Manager;
+	};
+}
 
 template <typename TArchetype>
-struct Entity final
-{
-	size_t index;
-	bool alive;
-};
+using EntityHandle = detail::EntityIndex<TArchetype>&;
 
 namespace detail
 {
 	template <typename TArchetype>
-	struct ArchetypeStorage final
+	struct Entity final
 	{
-		ArchetypeStorage(size_t initialCapacity=1) : capacity(initialCapacity)
-		{
-			assert(initialCapacity > 0);
+		detail::EntityIndex<TArchetype> handle;
+		bool alive;
+	};
 
-			sxi::mpl::forTuple([initialCapacity](auto& c){
-				c.resize(initialCapacity);
-			}, components);
-		}
+	template <typename TArchetype>
+	class ArchetypeStorage final
+	{
+		size_t size{};
+		size_t newSize{};
+		size_t capacity{};
 
 		template <typename... Ts>
     	using TupleOfVectors = std::tuple<std::vector<Ts>...>;
 		sxi::mpl::Rename<TupleOfVectors, TArchetype> components;
 
+		std::vector<Entity<TArchetype>> entities;
+
 		void reserve(size_t newCapacity)
 		{
 			assert(newCapacity > capacity);
 			
+			entities.resize(newCapacity);
 			sxi::mpl::forTuple([newCapacity](auto& c){
 				c.resize(newCapacity);
 			}, components);
+
+			for (size_t i = capacity; i < newCapacity; ++i)
+				entities[i].alive = false;
 
 			capacity = newCapacity;
 		}
 
 		void reserveIfNeeded()
 		{
-			if (capacity > size)
+			if (capacity > newSize)
 				return;
 
 			reserve(2 * capacity);
 		}
 
-		Entity<TArchetype> createEntity()
+		[[nodiscard]] Entity<TArchetype>& entity(EntityHandle<TArchetype> handle) noexcept
+		{
+			return entities[handle.index];
+		}
+
+		[[nodiscard]] const Entity<TArchetype>& entity(EntityHandle<TArchetype> handle) const noexcept
+		{
+			return entities[handle.index];
+		}
+
+		[[nodiscard]] size_t refreshImpl() noexcept
+		{
+			size_t left{0}, right{newSize - 1};
+            while (true)
+            {
+                // go from left
+                while (true)
+                {
+                    if (left > right)
+                        return left;
+                    if (!entities[left].alive)
+                        break;
+                    ++left;
+                }
+                // go from right
+                while (true)
+                {
+                    if (left >= right)
+                        return left;
+                    if (entities[right].alive)
+                        break;
+                    --right;
+                }
+
+                assert(!entities[left].alive);
+                assert(entities[right].alive);
+
+                std::swap(entities[left], entities[right]);
+				entities[left].handle.index = left; // only matters for alive one
+				sxi::mpl::forTuple([left, right](auto& c){
+					std::swap(c[left], c[right]);
+				}, components);
+				++left;
+				--right;
+            }
+            return right;
+		}
+
+	public:
+		ArchetypeStorage(size_t initialCapacity=1)
+		{
+			assert(initialCapacity > 0);
+
+			reserve(initialCapacity);
+		}
+
+		[[nodiscard]] EntityHandle<TArchetype> createEntity()
 		{
 			reserveIfNeeded();
-			return Entity<TArchetype>{ size++, true };
+			
+			size_t freeIndex = newSize++;
+
+			Entity<TArchetype>& e = entities[freeIndex];
+			assert(!e.alive);
+			e.handle.index = freeIndex;
+			e.alive = true;
+
+			return e.handle;
 		}
-		
-	private:
-		size_t size{};
-		size_t capacity{};
+
+		template <typename TComponent>
+		[[nodiscard]] TComponent& component(EntityHandle<TArchetype> handle) noexcept
+		{
+			return std::get<std::vector<TComponent>>(components)[handle.index];
+		}
+
+		template <typename TComponent>
+		[[nodiscard]] const TComponent& component(EntityHandle<TArchetype> handle) const noexcept
+		{
+			return std::get<std::vector<TComponent>>(components)[handle.index];
+		}
+
+		bool isAlive(EntityHandle<TArchetype> handle) const noexcept
+		{
+			return entity(handle).alive;
+		}
+
+		void kill(EntityHandle<TArchetype> handle) noexcept
+		{
+			entity(handle).alive = false;
+		}
+
+		void refresh() noexcept
+		{
+			if (newSize == 0)
+			{
+				size = 0;
+				return;
+			}
+
+			size = newSize = refreshImpl();
+		}
 	};
 }
 
@@ -160,29 +273,43 @@ class Manager final
 
 public:
 	template <typename TArchetype>
-	Entity<TArchetype> createEntity()
+	[[nodiscard]] EntityHandle<TArchetype> createEntity()
 	{
 		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
 
 		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).createEntity();
 	}
 
-	template <typename TArchetype>
-	auto& components() noexcept
-	{
-		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
-
-		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).components;
-	}
-
 	template <typename TComponent, typename TArchetype>
-	auto& component(const Entity<TArchetype>& entity) noexcept
+	TComponent& component(EntityHandle<TArchetype> handle) noexcept
 	{
 		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
 		static_assert(isComponent<TComponent>(), "TComponent must be a component");
 
-		return std::get<std::vector<TComponent>>(
-			std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).components)[entity.index];
+		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).template component<TComponent>(handle);
+	}
+
+	template <typename TArchetype>
+	bool isAlive(EntityHandle<TArchetype> handle) const noexcept
+	{
+		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
+
+		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).isAlive(handle);
+	}
+
+	template <typename TArchetype>
+	void kill(EntityHandle<TArchetype> handle) noexcept
+	{
+		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
+
+		std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).kill(handle);
+	}
+
+	void refresh() noexcept
+	{
+		sxi::mpl::forTuple([](auto& as){
+			as.refresh();
+		}, archetypes);
 	}
 };
 
@@ -223,22 +350,35 @@ int main(int argc, char* args[])
 
 	Manager mgr;
 
-	Entity<Soldier> soldier1 = mgr.createEntity<Soldier>();
+	EntityHandle<Soldier> soldier1 = mgr.createEntity<Soldier>();
 	PositionComponent& ps1 = mgr.component<PositionComponent>(soldier1);
 	ps1.pos = glm::vec3(1, 2, 3);
 
-	Entity<Soldier> soldier2 = mgr.createEntity<Soldier>();
+	EntityHandle<Soldier> soldier2 = mgr.createEntity<Soldier>();
 	PositionComponent& ps2 = mgr.component<PositionComponent>(soldier2);
 	ps2.pos = glm::vec3(4, 5, 6);
 
-	Entity<Soldier> soldier3 = mgr.createEntity<Soldier>();
-	Entity<Soldier> soldier4 = mgr.createEntity<Soldier>();
+	EntityHandle<Soldier> soldier3 = mgr.createEntity<Soldier>();
+	EntityHandle<Soldier> soldier4 = mgr.createEntity<Soldier>();
 
-	Entity<Tank> tank1 = mgr.createEntity<Tank>();
+	EntityHandle<Tank> tank1 = mgr.createEntity<Tank>();
 	RenderComponent& rt1 = mgr.component<RenderComponent>(tank1);
 	rt1.render = false;
 
-	Entity<Tank> tank2 = mgr.createEntity<Tank>();
+	EntityHandle<Tank> tank2 = mgr.createEntity<Tank>();
+
+	mgr.refresh();
+
+	mgr.kill(soldier2);
+	
+	mgr.refresh();
+
+	PositionComponent& pos = mgr.component<PositionComponent>(soldier4);
+	pos.pos = SXI_VEC3_MAX;
+
+	mgr.kill(tank1);
+
+	mgr.refresh();
 
 	return 0;
 }
