@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Renderer.h"
-
 #include <vulkan/vulkan.h>
 
 #include <vector>
@@ -10,6 +8,7 @@
 
 #include "SXICore/Timing.h"
 #include "SXICore/Types.h"
+#include "SXICore/ECS/Manager.h"
 
 namespace sxi::renderer::detail
 {
@@ -82,6 +81,12 @@ namespace sxi::renderer::detail
 		VkDescriptorPool descriptorPool{};
 		std::array<VkDescriptorSetLayout, DescriptorSetType::Count> descriptorSetLayouts{};
 
+		size_t currentPhysicalDeviceIndex{};
+		u8 currentFrameIndex{};
+		u8 lastFrameIndex = MAX_FRAMES_IN_FLIGHT - 1;
+
+		std::array<FrameContext*, MAX_FRAMES_IN_FLIGHT> frameContexts{};
+
 		Context(const VkInstance&, const VkSurfaceKHR&, const std::vector<const char*>&);
 		~Context();
 
@@ -92,6 +97,12 @@ namespace sxi::renderer::detail
 		inline u8 currentFrame() const { return currentFrameIndex; }
 		inline u8 lastFrame() const { return lastFrameIndex; }
 
+		inline void advanceFrame() 
+		{
+			lastFrameIndex = currentFrameIndex;
+			currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT; 
+		}
+
 	private:
 		void enumeratePhysicalDevices(const VkSurfaceKHR&);
 		void chooseBestPhysicalDevice();
@@ -99,19 +110,5 @@ namespace sxi::renderer::detail
 		std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> chooseQueueFamilyIndices(const VkSurfaceKHR&) const;
 		void createDescriptorPool();
 		void createDescriptorSetLayouts();
-
-		inline void advanceFrame() 
-		{
-			lastFrameIndex = currentFrameIndex;
-			currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT; 
-		}
-
-		size_t currentPhysicalDeviceIndex{};
-		u8 currentFrameIndex{};
-		u8 lastFrameIndex = MAX_FRAMES_IN_FLIGHT - 1;
-
-		std::array<FrameContext*, MAX_FRAMES_IN_FLIGHT> frameContexts{};
-
-		friend void sxi::renderer::render(const Time&);
 	} *context;
 }

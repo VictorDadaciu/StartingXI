@@ -7,6 +7,7 @@
 #include <vector>
 #include <tuple>
 #include <span>
+#include <limits>
 
 #include "SXIMath/Vec.h"
 
@@ -14,20 +15,15 @@
 #include "SXICore/File.h"
 #include "SXICore/Timing.h"
 
-#include "SXICore/MPL/TypeList.h"
-#include "SXICore/MPL/Contains.h"
-#include "SXICore/MPL/Count.h"
-#include "SXICore/MPL/IndexOf.h"
-#include "SXICore/MPL/Repeat.h"
-#include "SXICore/MPL/Tuple.h"
-#include "SXICore/MPL/Filter.h"
-#include "SXICore/MPL/TypeListOperations.h"
-#include "SXICore/MPL/Macros.h"
+#include "SXICore/ECS/Manager.h"
+#include "ECSSettings.h"
 
 const std::string MODELS_PATH = "../../MysteriousGame/models/";
 const std::string TEXTURES_PATH = "../../MysteriousGame/textures/";
 const std::string SHADERS_PATH = "../../MysteriousGame/shaders/";
 const std::string SHADERS_GEN_PATH = "../../MysteriousGame/shaders/generated/";
+
+static sxi::ecs::Manager<ECSSettings> mgr;
 
 static void loop()
 {
@@ -58,327 +54,52 @@ static void loop()
 		// if (!minimized)
 		// 	renderer->render(time);
 
-		sxi::renderer::render(time);
+		mgr.forEntitiesMatching<MoveSignature>([&time](auto&, auto& posComponent){
+			posComponent.pos.y += 1 * time.dt;
+		});
+
+		mgr.forEntitiesMatching<RotateSignature>([&time](auto&, auto& yRotComponent){
+			yRotComponent.rot += 0.1 * time.dt;
+		});
+
+		sxi::renderer::render(mgr, time);
+		mgr.refresh();
 		time.refresh();
 	}
 }
 
-template <typename... Ts> using Signature = sxi::mpl::typelist<Ts...>;
-template <typename... Ts> using SignatureList = sxi::mpl::typelist<Ts...>;
-
-template <typename... Ts> using ComponentList = sxi::mpl::typelist<Ts...>;
-
-template <typename... Ts> using Archetype = sxi::mpl::typelist<Ts...>;
-template <typename... Ts> using ArchetypeList = sxi::mpl::typelist<Ts...>;
-
-struct PositionComponent
-{
-	glm::vec3 pos;
-};
-struct RenderComponent
-{
-	bool render{ true };
-};
-using Components = ComponentList<PositionComponent, RenderComponent>;
-
-using Soldier = Archetype<PositionComponent>;
-using Tank = Archetype<PositionComponent, RenderComponent>;
-using Archetypes = ArchetypeList<Soldier, Tank>;
-	
-namespace detail
-{
-	template <typename TArchetype>
-	class ArchetypeStorage;
-
-	template <typename TArchetype>
-	struct EntityIndex
-	{
-	private:
-		size_t index;
-
-		friend class ArchetypeStorage<TArchetype>;
-		friend class Manager;
-	};
-}
-
-template <typename TArchetype>
-using EntityHandle = detail::EntityIndex<TArchetype>&;
-
-namespace detail
-{
-	template <typename TArchetype>
-	struct Entity final
-	{
-		detail::EntityIndex<TArchetype> handle;
-		bool alive;
-	};
-
-	template <typename TArchetype>
-	class ArchetypeStorage final
-	{
-		size_t size{};
-		size_t newSize{};
-		size_t capacity{};
-
-		template <typename... Ts>
-    	using TupleOfVectors = std::tuple<std::vector<Ts>...>;
-		sxi::mpl::Rename<TupleOfVectors, TArchetype> components;
-
-		std::vector<Entity<TArchetype>> entities;
-
-		void reserve(size_t newCapacity)
-		{
-			assert(newCapacity > capacity);
-			
-			entities.resize(newCapacity);
-			sxi::mpl::forTuple([newCapacity](auto& c){
-				c.resize(newCapacity);
-			}, components);
-
-			for (size_t i = capacity; i < newCapacity; ++i)
-				entities[i].alive = false;
-
-			capacity = newCapacity;
-		}
-
-		void reserveIfNeeded()
-		{
-			if (capacity > newSize)
-				return;
-
-			reserve(2 * capacity);
-		}
-
-		[[nodiscard]] Entity<TArchetype>& entity(EntityHandle<TArchetype> handle) noexcept
-		{
-			return entities[handle.index];
-		}
-
-		[[nodiscard]] const Entity<TArchetype>& entity(EntityHandle<TArchetype> handle) const noexcept
-		{
-			return entities[handle.index];
-		}
-
-		[[nodiscard]] size_t refreshImpl() noexcept
-		{
-			size_t left{0}, right{newSize - 1};
-            while (true)
-            {
-                // go from left
-                while (true)
-                {
-                    if (left > right)
-                        return left;
-                    if (!entities[left].alive)
-                        break;
-                    ++left;
-                }
-                // go from right
-                while (true)
-                {
-                    if (left >= right)
-                        return left;
-                    if (entities[right].alive)
-                        break;
-                    --right;
-                }
-
-                assert(!entities[left].alive);
-                assert(entities[right].alive);
-
-                std::swap(entities[left], entities[right]);
-				entities[left].handle.index = left; // only matters for alive one
-				sxi::mpl::forTuple([left, right](auto& c){
-					std::swap(c[left], c[right]);
-				}, components);
-				++left;
-				--right;
-            }
-            return right;
-		}
-
-	public:
-		ArchetypeStorage(size_t initialCapacity=1)
-		{
-			assert(initialCapacity > 0);
-
-			reserve(initialCapacity);
-		}
-
-		[[nodiscard]] EntityHandle<TArchetype> createEntity()
-		{
-			reserveIfNeeded();
-			
-			size_t freeIndex = newSize++;
-
-			Entity<TArchetype>& e = entities[freeIndex];
-			assert(!e.alive);
-			e.handle.index = freeIndex;
-			e.alive = true;
-
-			return e.handle;
-		}
-
-		template <typename TComponent>
-		[[nodiscard]] TComponent& component(EntityHandle<TArchetype> handle) noexcept
-		{
-			return std::get<std::vector<TComponent>>(components)[handle.index];
-		}
-
-		template <typename TComponent>
-		[[nodiscard]] const TComponent& component(EntityHandle<TArchetype> handle) const noexcept
-		{
-			return std::get<std::vector<TComponent>>(components)[handle.index];
-		}
-
-		bool isAlive(EntityHandle<TArchetype> handle) const noexcept
-		{
-			return entity(handle).alive;
-		}
-
-		void kill(EntityHandle<TArchetype> handle) noexcept
-		{
-			entity(handle).alive = false;
-		}
-
-		void refresh() noexcept
-		{
-			if (newSize == 0)
-			{
-				size = 0;
-				return;
-			}
-
-			size = newSize = refreshImpl();
-		}
-	};
-}
-
-class Manager final
-{
-	template <typename... Ts>
-	using TupleOfArchetypeStorages = std::tuple<detail::ArchetypeStorage<Ts>...>;
-	sxi::mpl::Rename<TupleOfArchetypeStorages, Archetypes> archetypes;
-
-	template <typename T>
-	static constexpr bool isArchetype() noexcept
-	{
-		return sxi::mpl::Contains<T, Archetypes>::value;
-	}
-	template <typename T>
-	static constexpr bool isComponent() noexcept
-	{
-		return sxi::mpl::Contains<T, Components>::value;
-	}
-
-public:
-	template <typename TArchetype>
-	[[nodiscard]] EntityHandle<TArchetype> createEntity()
-	{
-		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
-
-		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).createEntity();
-	}
-
-	template <typename TComponent, typename TArchetype>
-	TComponent& component(EntityHandle<TArchetype> handle) noexcept
-	{
-		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
-		static_assert(isComponent<TComponent>(), "TComponent must be a component");
-
-		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).template component<TComponent>(handle);
-	}
-
-	template <typename TArchetype>
-	bool isAlive(EntityHandle<TArchetype> handle) const noexcept
-	{
-		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
-
-		return std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).isAlive(handle);
-	}
-
-	template <typename TArchetype>
-	void kill(EntityHandle<TArchetype> handle) noexcept
-	{
-		static_assert(isArchetype<TArchetype>(), "TArchetype must be an archetype");
-
-		std::get<detail::ArchetypeStorage<TArchetype>>(archetypes).kill(handle);
-	}
-
-	void refresh() noexcept
-	{
-		sxi::mpl::forTuple([](auto& as){
-			as.refresh();
-		}, archetypes);
-	}
-};
-
-// struct T0{};
-// struct T1{};
-// struct T2{};
-// using S0 = sxi::ecs::Signature<>;
-// using S1 = sxi::ecs::Signature<C0, T0>;
-// using S2 = sxi::ecs::Signature<C1, T1>;
-// using S3 = sxi::ecs::Signature<C0, T1, T2>;
-
-// using Components = sxi::ecs::ComponentList<C0, C1>;
-// using Tags = sxi::ecs::TagList<T0, T1, T2>;
-// using Signatures = sxi::ecs::SignatureList<S0, S1, S2, S3>;
-
-// using ECSSettings = sxi::ecs::Settings<Components, Tags, Signatures>;
-// using ECSManager = sxi::ecs::Manager<ECSSettings>;
-
 int main(int argc, char* args[])
 {
-	// sxi::renderer::init(1600, 900);
-	// sxi::renderer::addGraphicsPipeline(
-	// 	sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
-	// 	sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
-	// sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
-	// sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
-	// sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
-	// sxi::renderer::addModel(MODELS_PATH + "Rocking_Chair.obj");
-	// loop();
-	// sxi::renderer::destroy();
+	sxi::renderer::init(1600, 900);
+	sxi::renderer::addGraphicsPipeline(
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
+		sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
+	sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
+	sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
+	sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
+	sxi::renderer::addModel(MODELS_PATH + "Rocking_Chair.obj");
 
-	// ECSManager manager(2);
-	// sxi::ecs::EntityIndex index = manager.createIndex();
-	// manager.addTag<T0>(index);
-	// manager.kill(index);
-	// manager.refresh();
-	// manager.print();
-
-	Manager mgr;
-
-	EntityHandle<Soldier> soldier1 = mgr.createEntity<Soldier>();
-	PositionComponent& ps1 = mgr.component<PositionComponent>(soldier1);
-	ps1.pos = glm::vec3(1, 2, 3);
-
-	EntityHandle<Soldier> soldier2 = mgr.createEntity<Soldier>();
-	PositionComponent& ps2 = mgr.component<PositionComponent>(soldier2);
-	ps2.pos = glm::vec3(4, 5, 6);
-
-	EntityHandle<Soldier> soldier3 = mgr.createEntity<Soldier>();
-	EntityHandle<Soldier> soldier4 = mgr.createEntity<Soldier>();
-
-	EntityHandle<Tank> tank1 = mgr.createEntity<Tank>();
-	RenderComponent& rt1 = mgr.component<RenderComponent>(tank1);
-	rt1.render = false;
-
-	EntityHandle<Tank> tank2 = mgr.createEntity<Tank>();
-
+	{
+		sxi::ecs::EntityIndex<Object> ent = mgr.createEntity<Object>();
+		sxi::ecs::RenderComponent& render = mgr.component<sxi::ecs::RenderComponent>(ent);
+		render.mdl = 0;
+		render.tex = 0;
+		sxi::ecs::PositionComponent& pos = mgr.component<sxi::ecs::PositionComponent>(ent);
+		pos.pos = glm::vec3(20, 0, 20);
+	}
+	{
+		sxi::ecs::EntityIndex<Object> ent = mgr.createEntity<Object>();
+		sxi::ecs::RenderComponent& render = mgr.component<sxi::ecs::RenderComponent>(ent);
+		render.mdl = 1;
+		render.tex = 1;
+		sxi::ecs::PositionComponent& pos = mgr.component<sxi::ecs::PositionComponent>(ent);
+		pos.pos = glm::vec3(-20, 0, 20);
+	}
+	mgr.createEntity<Light>();
 	mgr.refresh();
 
-	mgr.kill(soldier2);
-	
-	mgr.refresh();
-
-	PositionComponent& pos = mgr.component<PositionComponent>(soldier4);
-	pos.pos = SXI_VEC3_MAX;
-
-	mgr.kill(tank1);
-
-	mgr.refresh();
+	loop();
+	sxi::renderer::destroy();
 
 	return 0;
 }

@@ -3,7 +3,9 @@ cmake_minimum_required(VERSION 3.15..4.0)
 project(MysteriousGame VERSION 1.0
                        LANGUAGES C CXX)
 
-add_executable(${PROJECT_NAME} src/MysteriousGame.cpp)
+add_executable(${PROJECT_NAME} 
+    src/MysteriousGame.cpp
+    include/ECSSettings.h)
 target_link_libraries(${PROJECT_NAME}
     Vulkan::Vulkan
     glm::glm
@@ -16,6 +18,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     Vulkan
     SDL3
     glm
+    include
     ../SXIMath/include
     ../SXICore/include
     ../SXIPathfinding/include

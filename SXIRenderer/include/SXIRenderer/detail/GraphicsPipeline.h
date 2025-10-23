@@ -1,7 +1,7 @@
 #pragma once
 
-#include "detail/Context.h"
-#include "detail/Window.h"
+#include "Context.h"
+#include "Window.h"
 
 #include <array>
 

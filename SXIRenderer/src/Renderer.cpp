@@ -189,7 +189,7 @@ namespace sxi::renderer
 		detail::vertexBuffer = new detail::VertexBuffer();
 		detail::indexBuffer = new detail::IndexBuffer();
 		detail::uniformBuffers = new detail::UniformBuffer[MAX_FRAMES_IN_FLIGHT];
-		scene = new Scene(2);
+		scene = new Scene(100);
 
 		initialized = true;
 	}
@@ -250,137 +250,6 @@ namespace sxi::renderer
 			vkFreeMemory(detail::context->logicalDevice, stagingBufferMem, nullptr);
 		}
 		models.push_back(model);
-	}
-
-	void recordCommandBuffer(VkCommandBuffer commandBuffer, u32 imageIndex, u32 currentFrame)
-	{
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = 0;
-		beginInfo.pInheritanceInfo = nullptr;
-		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-			throw std::runtime_error("Failed to begin recording command buffer");
-
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = detail::basicRenderPass->pass;
-		renderPassInfo.framebuffer = detail::basicRenderPass->frameBuffers[imageIndex];
-		renderPassInfo.renderArea.offset = {0, 0};
-		renderPassInfo.renderArea.extent = detail::window->swapchain->extent;
-		std::array<VkClearValue, 2> clearValues{};
-		clearValues[0].color = {{0.01f, 0.01f, 0.01f, 1.0f}};
-		clearValues[1].depthStencil = {1.0f, 0};
-		renderPassInfo.clearValueCount = SXI_TO_U32(clearValues.size());
-		renderPassInfo.pClearValues = clearValues.data();
-
-		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, detail::basicLightingPipeline->pipeline);
-
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(detail::window->swapchain->extent.width);
-		viewport.height = static_cast<float>(detail::window->swapchain->extent.height);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-		VkRect2D scissor{};
-		scissor.offset = {0, 0};
-		scissor.extent = detail::window->swapchain->extent;
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-		const SceneData& sceneData = scene->currentSceneData();
-		vkCmdBindDescriptorSets(
-			commandBuffer,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			detail::basicLightingPipeline->layout,
-			detail::DescriptorSetType::PerFrame, 1,
-			&sceneData.frameDescriptorSet, 0, nullptr);
-
-		VkBuffer vertexBuffers[] = { detail::vertexBuffer->buffer };
-
-		for (size_t modelIndex = 0; modelIndex < models.size(); modelIndex++)
-		{
-			Model* model = models[modelIndex];
-			VkDeviceSize offsets[] = { model->vertexBufferOffset };
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-			
-			vkCmdBindIndexBuffer(commandBuffer, detail::indexBuffer->buffer, model->indexBufferOffset, VK_INDEX_TYPE_UINT32);
-			vkCmdBindDescriptorSets(
-				commandBuffer,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				detail::basicLightingPipeline->layout,
-				detail::DescriptorSetType::PerModel, 1,
-				&textures[modelIndex]->descriptorSet, 0, nullptr);
-
-			vkCmdBindDescriptorSets(
-				commandBuffer,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				detail::basicLightingPipeline->layout,
-				detail::DescriptorSetType::PerObject, 1,
-				&sceneData.objectDescriptorSets[modelIndex], 0, nullptr);
-				
-			vkCmdDrawIndexed(commandBuffer, SXI_TO_U32(model->indices.size()), 1, 0, 0, 0);	
-		}
-
-		vkCmdEndRenderPass(commandBuffer);
-
-		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-			throw InvalidArgumentException("Failed to record command buffer");
-	}
-
-	void render(const Time& time)
-	{
-		if (!initialized)
-			throw InitializationException("Renderer has not been initialized");
-
-		const detail::FrameContext* frameContext = detail::context->currentFrameContext();
-		vkWaitForFences(detail::context->logicalDevice, 1, &frameContext->inFlightFence, VK_TRUE, UINT64_MAX);
-		
-		u32 imageIndex;
-		VkResult result = vkAcquireNextImageKHR(detail::context->logicalDevice, detail::window->swapchain->swapchain, UINT64_MAX, frameContext->imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-		
-		vkResetFences(detail::context->logicalDevice, 1, &frameContext->inFlightFence);
-		scene->run(time);
-			
-		vkResetCommandBuffer(frameContext->commandBuffer, 0);
-		recordCommandBuffer(frameContext->commandBuffer, imageIndex, detail::context->currentFrame());
-
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-		VkSemaphore waitSemaphores[] = { frameContext->imageAvailableSemaphore };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &frameContext->commandBuffer;
-
-		VkSemaphore signalSemaphores[] = { detail::window->swapchain->renderFinishedSemaphores[imageIndex] };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		if (vkQueueSubmit(detail::context->graphicsQueue, 1, &submitInfo, frameContext->inFlightFence) != VK_SUCCESS)
-			throw InvalidArgumentException("Failed to submit draw command buffer");
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
-
-		VkSwapchainKHR swapChains[] = { detail::window->swapchain->swapchain };
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-		presentInfo.pImageIndices = &imageIndex;
-		presentInfo.pResults = nullptr;
-
-		vkQueuePresentKHR(detail::context->presentQueue, &presentInfo);
-
-		detail::context->advanceFrame();
 	}
 
 	void destroy()

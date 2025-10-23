@@ -24,7 +24,9 @@ add_library(${PROJECT_NAME} STATIC
             include/${PROJECT_NAME}/detail/RenderPass.h
             include/${PROJECT_NAME}/detail/GraphicsPipeline.h
             include/${PROJECT_NAME}/detail/Buffer.h
-            include/${PROJECT_NAME}/detail/Utils.h)
+            include/${PROJECT_NAME}/detail/Utils.h
+            include/${PROJECT_NAME}/components/RenderComponent.h
+            include/${PROJECT_NAME}/tags/LightTag.h)
 
 target_link_libraries(${PROJECT_NAME}
     Vulkan::Vulkan

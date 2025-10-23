@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include "detail/Context.h"
+#include "Context.h"
 
 namespace sxi::renderer::detail
 {

@@ -6,6 +6,7 @@
 #include "Type.h"
 #include "Map.h"
 #include "Macros.h"
+#include "Tuple.h"
 
 namespace sxi::mpl 
 {  

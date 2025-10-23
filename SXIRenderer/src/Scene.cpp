@@ -9,45 +9,11 @@ namespace sxi::renderer
 {
     Scene* scene{};
 
-    SceneData::SceneData(u8 numObjects, u8 frame) : frame(frame)
+    SceneData::SceneData(u8 maxObjects, u8 frame) : frame(frame)
     {
-        objectDescriptorSets.resize(numObjects);
+        objectDescriptorSets.resize(maxObjects);
         createFrameDescriptorSet();
         createObjectDescriptorSets();
-    }
-
-    void Scene::moveLight(const Time& time)
-    {
-        static TimePoint start = time.time;
-		float timePassed = -Time::elapsed(time.time, start);
-
-        lightPos = glm::vec3(100.f * std::sinf(timePassed), 30, 100.f * std::cosf(timePassed));
-    }
-
-    void Scene::rotateObjects(const Time& time)
-    {
-        for (float& rotation : rotations)
-            rotation += 0.1f * time.dt;
-    }
-
-    void Scene::finalize()
-    {
-        u8 currentFrame = detail::context->currentFrame();
-        char* offset = (char*)detail::uniformBuffers[currentFrame].mapped;
-        
-        frameUBO.view = glm::lookAt(glm::vec3(0.f, 50.f, -75.f), glm::vec3(0.f, 20.f, 0.f), SXI_VEC3_UP);
-        frameUBO.proj = glm::perspective(glm::radians(60.0f), detail::window->swapchain->extent.width / (float) detail::window->swapchain->extent.height, 0.1f, 10000.0f);
-		frameUBO.proj[1][1] *= -1;
-        memcpy(offset, &frameUBO, sizeof(FrameUBO));
-
-        frameLight = FrameLight{ glm::vec4(lightPos.x, lightPos.y, lightPos.z, 1.f) };
-        offset += sizeof(FrameUBO);
-        memcpy(offset, &frameLight, sizeof(FrameLight));
-
-        for (size_t i = 0; i < rotations.size(); ++i)
-            objectUBOs[i].model = glm::rotate(glm::translate(glm::mat4(1.0f), translations[i]), -rotations[i], SXI_VEC3_UP);
-        offset += sizeof(FrameLight);
-        memcpy(offset, objectUBOs.data(), objectUBOs.size() * sizeof(ObjectUBO));
     }
 
     void SceneData::createFrameDescriptorSet()
@@ -129,22 +95,10 @@ namespace sxi::renderer
 
     }
 
-    Scene::Scene(u8 numObjects)
+    Scene::Scene(u8 maxObjects)
     {
-        lightPos = glm::vec4(0.f, 30.f, 100.f, 1.f);
-        translations.resize(numObjects);
-        for (size_t i = 0; i < numObjects; ++i)
-            translations[i] = glm::vec3(-30.f + i * 60.f, 0.f, 0.f);
-        rotations.resize(numObjects, 0.f);
-        objectUBOs.resize(numObjects);
+        objectUBOs.resize(maxObjects);
         for (size_t i = 0; i < sceneDatas.size(); ++i)
-            sceneDatas[i] = SceneData(numObjects, SXI_TO_U8(i));
-    }
-
-    void Scene::run(const Time& time)
-    {
-        moveLight(time);
-        rotateObjects(time);
-        finalize();
+            sceneDatas[i] = SceneData(maxObjects, SXI_TO_U8(i));
     }
 }
