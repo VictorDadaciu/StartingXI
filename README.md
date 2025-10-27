@@ -1,2 +1,10 @@
 # StartingXI
-Finally learning to make a 3D game engine the right way. Renders with Vulkan for the moment, maybe will include other renderers in the future. Strictly for educational purposes.
+Starting XI is a WIP ECS-based game engine that is supposed to be more a learning device. While Unity, Unreal Engine, Godot etc. are amazing tools to make games with, I noticed that using them didn't scratch a certain itch I was feeling. I found myself much more interested in how Unity's pathfinding and navmesh systems were written than in how to make the next RTS blockbuster.
+
+### High-level Goals
+- __Learning__. I know I can't single-handledly create something more performant than what's already on the market and certainly don't expect anyone to actually _use_ my libraries, but maybe pretending as if I have stakeholders and users might push me towards making more realistic decisions and at least to converting some unknown-unknowns into known-unknowns.
+- __Modularity__. I want a hypothetical user to be able to select and build only what they need for a specific project. Not every project needs fancy pathfinding or vulkan rendering so they shouldn't be tightly coupled into one single massive library. Even though they are not separate repositories at the moment, I am working on them as if they were, trying to isolate behaviour and data as much as possible.
+- __Systems__. I want to guide the user into thinking of entities as compositions of small blocks of data rather than independent units of behaviour. Systems should act upon that data to leverage the cache and simplify the design of a game's mechanics. Therefore, it should be dead-simple to define and work with systems and signatures.
+- __Jobs__. I envision an ECS where the user defines data and behaviours and can simply choose to multithread them or not with a single method call. I would need some sort of a thread pool, a job scheduler, and some way to chunk component data to optimally leverage multiple threads pf logic.
+
+I would like to reach a stable enough point in the future and to also visually showcase my progress, either through devlogs or through making small games which show off certain parts of the engine.
