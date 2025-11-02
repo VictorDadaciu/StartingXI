@@ -2,9 +2,9 @@
 
 namespace sxi::mpl
 {
-    template <typename T>
-    struct Type
-    {
-        using type = T;
-    };
-}
+template <typename T>
+struct Type
+{
+    using type = T;
+};
+} // namespace sxi::mpl

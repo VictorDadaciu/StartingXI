@@ -1,42 +1,42 @@
 #pragma once
 
 #include "RStarTree.h"
+#include "SXIMath/Vec.h"
 
 #include <vector>
 
-#include "SXIMath/Vec.h"
-
 namespace sxi
 {
-	struct QuarterEdge;
-	struct MapPoint
-	{
-		MapPoint(const glm::vec2& vec) : v(vec) {}
+struct QuarterEdge;
 
-		glm::vec2 v = SXI_VEC2_MAX;
-		QuarterEdge* start = nullptr;
-	};
+struct MapPoint
+{
+    MapPoint(const glm::vec2& vec) : v(vec) {}
 
-	struct RSTLeaf;
-	class MapShape
-	{
-	public:
-		MapShape() = default;
-		MapShape(const std::vector<QuarterEdge*>&);
+    glm::vec2 v = SXI_VEC2_MAX;
+    QuarterEdge* start = nullptr;
+};
 
-		bool inside(const glm::vec2&) const;
-		QuarterEdge* closestEdgeForPointOutside(const glm::vec2&) const;
-		QuarterEdge* closestEdgeForPointInside(const glm::vec2&, glm::vec2&) const;
+struct RSTLeaf;
 
-		AABB generateBoundingBox() const;
+class MapShape
+{
+public:
+    MapShape() = default;
+    MapShape(const std::vector<QuarterEdge*>&);
 
-	private:
-		std::vector<QuarterEdge*> internals{};
-		std::vector<QuarterEdge*> edges{};
-		RSTLeaf* leaf = nullptr;
+    bool inside(const glm::vec2&) const;
+    QuarterEdge* closestEdgeForPointOutside(const glm::vec2&) const;
+    QuarterEdge* closestEdgeForPointInside(const glm::vec2&, glm::vec2&) const;
 
-		friend class Map;
-		friend class CDT;
-	};
-}
+    AABB generateBoundingBox() const;
 
+private:
+    std::vector<QuarterEdge*> internals{};
+    std::vector<QuarterEdge*> edges{};
+    RSTLeaf* leaf = nullptr;
+
+    friend class Map;
+    friend class CDT;
+};
+} // namespace sxi

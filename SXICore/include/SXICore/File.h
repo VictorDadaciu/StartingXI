@@ -1,10 +1,9 @@
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace sxi::file
 {
-	std::vector<char> readFileAsBytes(const std::string&);
+std::vector<char> readFileAsBytes(const std::string&);
 }
-

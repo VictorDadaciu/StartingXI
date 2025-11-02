@@ -1,24 +1,22 @@
 #pragma once
 
-#include "Context.h"
-#include "Window.h"
-
-#include <array>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sxi::renderer::detail
 {
-    struct GraphicsPipeline
-    {
-		VkPipelineLayout layout{};
-        VkPipeline pipeline{};
+struct GraphicsPipeline
+{
+    VkPipelineLayout layout{};
+    VkPipeline pipeline{};
 
-        GraphicsPipeline(const std::vector<char>&, const std::vector<char>&);
-        ~GraphicsPipeline();
+    GraphicsPipeline(const std::vector<char>&, const std::vector<char>&);
+    ~GraphicsPipeline();
 
-    private:
-        void createLayout();
-        void createPipeline(const std::vector<char>&, const std::vector<char>&);
-    };
+private:
+    void createLayout();
+    void createPipeline(const std::vector<char>&, const std::vector<char>&);
+};
 
-    extern GraphicsPipeline* basicLightingPipeline;
-}
+extern GraphicsPipeline* basicLightingPipeline;
+} // namespace sxi::renderer::detail

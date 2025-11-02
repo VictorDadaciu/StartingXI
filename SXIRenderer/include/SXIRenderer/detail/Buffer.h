@@ -4,41 +4,41 @@
 
 namespace sxi::renderer::detail
 {
-    struct VertexBuffer
-    {
-        VkBuffer buffer{};
-        VkDeviceMemory memory{};
-        VkDeviceSize size{};
-        VkDeviceSize offset{};
+struct VertexBuffer
+{
+    VkBuffer buffer{};
+    VkDeviceMemory memory{};
+    VkDeviceSize size{};
+    VkDeviceSize offset{};
 
-        VertexBuffer();
-        ~VertexBuffer();
-    };
+    VertexBuffer();
+    ~VertexBuffer();
+};
 
-    struct IndexBuffer
-    {
-        VkBuffer buffer{};
-        VkDeviceMemory memory{};
-        VkDeviceSize size{};
-        VkDeviceSize offset{};
+struct IndexBuffer
+{
+    VkBuffer buffer{};
+    VkDeviceMemory memory{};
+    VkDeviceSize size{};
+    VkDeviceSize offset{};
 
-        IndexBuffer();
-        ~IndexBuffer();
-    };
+    IndexBuffer();
+    ~IndexBuffer();
+};
 
-    struct UniformBuffer
-    {
-        VkBuffer buffer{};
-        VkDeviceMemory memory{};
-        VkDeviceSize size{};
-        VkDeviceSize offset{};
-        void* mapped{};
+struct UniformBuffer
+{
+    VkBuffer buffer{};
+    VkDeviceMemory memory{};
+    VkDeviceSize size{};
+    VkDeviceSize offset{};
+    void* mapped{};
 
-        UniformBuffer();
-        ~UniformBuffer();
-    };
+    UniformBuffer();
+    ~UniformBuffer();
+};
 
-    extern VertexBuffer* vertexBuffer;
-    extern IndexBuffer* indexBuffer;
-    extern UniformBuffer* uniformBuffers;
-}
+extern VertexBuffer* vertexBuffer;
+extern IndexBuffer* indexBuffer;
+extern UniformBuffer* uniformBuffers;
+} // namespace sxi::renderer::detail

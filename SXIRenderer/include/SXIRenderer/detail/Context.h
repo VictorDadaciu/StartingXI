@@ -1,114 +1,125 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
-#include <vector>
-#include <array>
-#include <unordered_map>
-
-#include "SXICore/Timing.h"
 #include "SXICore/Types.h"
-#include "SXICore/ECS/Manager.h"
+
+#include <array>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sxi::renderer::detail
 {
-	constexpr u8 MAX_FRAMES_IN_FLIGHT = 2;
+constexpr u8 MAX_FRAMES_IN_FLIGHT = 2;
 
-	struct FrameContext
-	{
-		VkCommandPool commandPool{};
-		VkCommandBuffer commandBuffer{};
-		VkSemaphore imageAvailableSemaphore{};
-		VkFence inFlightFence{};
+struct FrameContext
+{
+    VkCommandPool commandPool{};
+    VkCommandBuffer commandBuffer{};
+    VkSemaphore imageAvailableSemaphore{};
+    VkFence inFlightFence{};
 
-		FrameContext(const VkDevice&, u8);
-		~FrameContext();
+    FrameContext(const VkDevice &, u8);
+    ~FrameContext();
 
-	private:
-		void createCommandPool(const VkDevice&, u8);
-		void createCommandBuffer(const VkDevice&);
-		void createSyncObjects(const VkDevice&);
-	};
+private:
+    void createCommandPool(const VkDevice &, u8);
+    void createCommandBuffer(const VkDevice &);
+    void createSyncObjects(const VkDevice &);
+};
 
-	struct PhysicalDevice
-	{
-		VkPhysicalDevice device{};
-		VkPhysicalDeviceProperties properties{};
-		VkPhysicalDeviceFeatures features{};
-		struct SwapchainSupportDetails
-		{
-			VkSurfaceCapabilitiesKHR capabilities{};
-			std::vector<VkSurfaceFormatKHR> formats{};
-			std::vector<VkPresentModeKHR> presentModes{};
-		} swapchainSupport{};
-		VkPhysicalDeviceMemoryProperties memProperties{};
+struct PhysicalDevice
+{
+    VkPhysicalDevice device{};
+    VkPhysicalDeviceProperties properties{};
+    VkPhysicalDeviceFeatures features{};
+    struct SwapchainSupportDetails
+    {
+        VkSurfaceCapabilitiesKHR capabilities{};
+        std::vector<VkSurfaceFormatKHR> formats{};
+        std::vector<VkPresentModeKHR> presentModes{};
+    } swapchainSupport{};
+    VkPhysicalDeviceMemoryProperties memProperties{};
 
-		VkSampleCountFlagBits maxMSAASamples{};
+    VkSampleCountFlagBits maxMSAASamples{};
 
-		PhysicalDevice(const VkPhysicalDevice&, const VkSurfaceKHR&);
+    PhysicalDevice(const VkPhysicalDevice &, const VkSurfaceKHR &);
 
-		bool suitable() const;
-		bool supportsExtensions() const;
-		int score() const;
+    bool suitable() const;
+    bool supportsExtensions() const;
+    int score() const;
 
-	private:
-		VkSampleCountFlagBits getMaxUsableSampleCount() const;
-	};
+private:
+    VkSampleCountFlagBits getMaxUsableSampleCount() const;
+};
 
-	enum DescriptorSetType
-	{
-		PerFrame = 0,
-		PerModel = 1,
-		PerObject = 2,
-		Count = 3
-	};
+enum DescriptorSetType
+{
+    PerFrame = 0,
+    PerModel = 1,
+    PerObject = 2,
+    Count = 3
+};
 
-	enum QueueFamilyIndex {
-		GRAPHICS = 0,
-		PRESENT = 1,
-		COUNT = 2
-	};
+enum QueueFamilyIndex
+{
+    GRAPHICS = 0,
+    PRESENT = 1,
+    COUNT = 2
+};
 
-	extern struct Context
-	{
-		VkInstance instance{};
-		std::vector<PhysicalDevice> physicalDevices;
-		VkDevice logicalDevice{};
-		VkQueue graphicsQueue{};
-		VkQueue presentQueue{};
-		VkQueue transferQueue{};
-        std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> queueFamiliesUsed{};
-		VkDescriptorPool descriptorPool{};
-		std::array<VkDescriptorSetLayout, DescriptorSetType::Count> descriptorSetLayouts{};
+extern struct Context
+{
+    VkInstance instance{};
+    std::vector<PhysicalDevice> physicalDevices;
+    VkDevice logicalDevice{};
+    VkQueue graphicsQueue{};
+    VkQueue presentQueue{};
+    VkQueue transferQueue{};
+    std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> queueFamiliesUsed{};
+    VkDescriptorPool descriptorPool{};
+    std::array<VkDescriptorSetLayout, DescriptorSetType::Count>
+        descriptorSetLayouts{};
 
-		size_t currentPhysicalDeviceIndex{};
-		u8 currentFrameIndex{};
-		u8 lastFrameIndex = MAX_FRAMES_IN_FLIGHT - 1;
+    size_t currentPhysicalDeviceIndex{};
+    u8 currentFrameIndex{};
+    u8 lastFrameIndex = MAX_FRAMES_IN_FLIGHT - 1;
 
-		std::array<FrameContext*, MAX_FRAMES_IN_FLIGHT> frameContexts{};
+    std::array<FrameContext *, MAX_FRAMES_IN_FLIGHT> frameContexts{};
 
-		Context(const VkInstance&, const VkSurfaceKHR&, const std::vector<const char*>&);
-		~Context();
+    Context(const VkInstance &,
+            const VkSurfaceKHR &,
+            const std::vector<const char *> &);
+    ~Context();
 
-		inline const PhysicalDevice& currentPhysicalDevice() const { return physicalDevices[currentPhysicalDeviceIndex]; }
-		inline const FrameContext* currentFrameContext() const { return frameContexts[currentFrameIndex]; }
-		inline const FrameContext* lastFrameContext() const { return frameContexts[lastFrameIndex]; }
+    inline const PhysicalDevice &currentPhysicalDevice() const
+    {
+        return physicalDevices[currentPhysicalDeviceIndex];
+    }
+    inline const FrameContext *currentFrameContext() const
+    {
+        return frameContexts[currentFrameIndex];
+    }
+    inline const FrameContext *lastFrameContext() const
+    {
+        return frameContexts[lastFrameIndex];
+    }
 
-		inline u8 currentFrame() const { return currentFrameIndex; }
-		inline u8 lastFrame() const { return lastFrameIndex; }
+    inline u8 currentFrame() const { return currentFrameIndex; }
+    inline u8 lastFrame() const { return lastFrameIndex; }
 
-		inline void advanceFrame() 
-		{
-			lastFrameIndex = currentFrameIndex;
-			currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT; 
-		}
+    inline void advanceFrame()
+    {
+        lastFrameIndex = currentFrameIndex;
+        currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+    }
 
-	private:
-		void enumeratePhysicalDevices(const VkSurfaceKHR&);
-		void chooseBestPhysicalDevice();
-		void createLogicalDevice(const VkSurfaceKHR&, const std::vector<const char*>&);
-		std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> chooseQueueFamilyIndices(const VkSurfaceKHR&) const;
-		void createDescriptorPool();
-		void createDescriptorSetLayouts();
-	} *context;
-}
+private:
+    void enumeratePhysicalDevices(const VkSurfaceKHR &);
+    void chooseBestPhysicalDevice();
+    void createLogicalDevice(const VkSurfaceKHR &,
+                             const std::vector<const char *> &);
+    std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT>
+    chooseQueueFamilyIndices(const VkSurfaceKHR &) const;
+    void createDescriptorPool();
+    void createDescriptorSetLayouts();
+} *context;
+} // namespace sxi::renderer::detail

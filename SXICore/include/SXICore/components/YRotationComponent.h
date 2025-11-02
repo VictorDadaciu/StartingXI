@@ -2,8 +2,8 @@
 
 namespace sxi::ecs
 {
-    struct YRotationComponent final
-    {
-        float rot;
-    };
-}
+struct YRotationComponent final
+{
+    float rot;
+};
+} // namespace sxi::ecs

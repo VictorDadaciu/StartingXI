@@ -1,29 +1,29 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sxi::renderer::detail
 {
-    struct RenderPass
-    {
-        VkRenderPass pass{};
-		VkImage colorImage{};
-		VkDeviceMemory colorImageMem{};
-		VkImageView colorImageView{};
-		VkImage depthImage{};
-		VkDeviceMemory depthImageMem{};
-		VkImageView depthImageView{};
-        std::vector<VkFramebuffer> frameBuffers{};
+struct RenderPass
+{
+    VkRenderPass pass{};
+    VkImage colorImage{};
+    VkDeviceMemory colorImageMem{};
+    VkImageView colorImageView{};
+    VkImage depthImage{};
+    VkDeviceMemory depthImageMem{};
+    VkImageView depthImageView{};
+    std::vector<VkFramebuffer> frameBuffers{};
 
-        RenderPass();
-        ~RenderPass();
+    RenderPass();
+    ~RenderPass();
 
-    private:
-        void createRenderPass();
-        void createResources();
-        void createFrameBuffers();
-    };
-    extern RenderPass* basicRenderPass;
-}
+private:
+    void createRenderPass();
+    void createResources();
+    void createFrameBuffers();
+};
+
+extern RenderPass* basicRenderPass;
+} // namespace sxi::renderer::detail

@@ -1,41 +1,40 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
-#include <vector>
-#include <string>
-
 #include "SXICore/Types.h"
+
+#include <string>
+#include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sxi::renderer
 {
-    struct Texture
-	{
-		unsigned char* raw{};
-		u64 size;
-		int width{};
-		int height{};
-		int channels{};
-		u32 mipLevels{};
-		VkDescriptorSet descriptorSet{};
+struct Texture
+{
+    unsigned char *raw{};
+    u64 size;
+    int width{};
+    int height{};
+    int channels{};
+    u32 mipLevels{};
+    VkDescriptorSet descriptorSet{};
 
-        VkImage image{};
-        VkImageView imageView{};
-        VkDeviceMemory memory{};
-        VkSampler sampler{};
+    VkImage image{};
+    VkImageView imageView{};
+    VkDeviceMemory memory{};
+    VkSampler sampler{};
 
-		Texture(const std::string&);
-		Texture(Texture&) = delete;
-		Texture(Texture&&) = default;
+    Texture(const std::string &);
+    Texture(Texture &) = delete;
+    Texture(Texture &&) = default;
 
-		Texture& operator=(Texture&) = delete;
-		Texture& operator=(Texture&&) = default;
+    Texture &operator=(Texture &) = delete;
+    Texture &operator=(Texture &&) = default;
 
-		~Texture();
+    ~Texture();
 
-	private:
-        void createVkResources();
-	};
+private:
+    void createVkResources();
+};
 
-    extern std::vector<Texture*> textures;
-}
+extern std::vector<Texture *> textures;
+} // namespace sxi::renderer
