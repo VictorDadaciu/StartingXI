@@ -8,7 +8,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-namespace sxi::renderer
+namespace sxi::renderer::detail
 {
 struct Vertex
 {
@@ -25,8 +25,7 @@ struct Vertex
         return bindingDesc;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3>
-    getAttributeDescription()
+    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescription()
     {
         std::array<VkVertexInputAttributeDescription, 3> attributeDescs{};
         attributeDescs[0].binding = 0;
@@ -67,18 +66,16 @@ struct Model
 };
 
 extern std::vector<Model*> models;
-} // namespace sxi::renderer
+} // namespace sxi::renderer::detail
 
 namespace std
 {
 template <>
-struct hash<sxi::renderer::Vertex>
+struct hash<sxi::renderer::detail::Vertex>
 {
-    size_t operator()(const sxi::renderer::Vertex& vertex) const
+    size_t operator()(const sxi::renderer::detail::Vertex& vertex) const
     {
-        return ((hash<glm::vec3>()(vertex.pos) ^
-                 (hash<glm::vec3>()(vertex.norm) << 1)) >>
-                1) ^
+        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.norm) << 1)) >> 1) ^
                (hash<glm::vec2>()(vertex.uv) << 1);
     }
 };

@@ -1,11 +1,11 @@
-#include "Model.h"
+#include "detail/Model.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
 #include <unordered_map>
 
-namespace sxi::renderer
+namespace sxi::renderer::detail
 {
 std::vector<Model*> models{};
 
@@ -16,8 +16,7 @@ Model::Model(const std::string& path)
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
 
-    if (!tinyobj::LoadObj(
-            &attrib, &shapes, &materials, &warn, &err, path.c_str()))
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str()))
         throw std::runtime_error(err.c_str());
 
     std::unordered_map<Vertex, u32> uniqueVerts{};
@@ -41,9 +40,8 @@ Model::Model(const std::string& path)
             }
             else
             {
-                vertex.uv = {
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+                vertex.uv = {attrib.texcoords[2 * index.texcoord_index + 0],
+                             1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
             }
 
             if (uniqueVerts.count(vertex) == 0)
@@ -56,4 +54,4 @@ Model::Model(const std::string& path)
         }
     }
 }
-} // namespace sxi::renderer
+} // namespace sxi::renderer::detail

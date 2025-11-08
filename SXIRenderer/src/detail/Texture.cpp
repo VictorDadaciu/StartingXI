@@ -1,4 +1,4 @@
-#include "Texture.h"
+#include "detail/Texture.h"
 
 #include "detail/Context.h"
 #include "detail/Utils.h"
@@ -10,11 +10,9 @@
 
 #include <cmath>
 
-namespace sxi::renderer
+namespace sxi::renderer::detail
 {
 std::vector<Texture*> textures{};
-
-using namespace detail;
 
 Texture::Texture(const std::string& path)
 {
@@ -46,8 +44,7 @@ void Texture::createVkResources()
 
     createBuffer(size,
                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                  stagingBuffer,
                  stagingBufferMem);
 
@@ -62,31 +59,20 @@ void Texture::createVkResources()
                 VK_SAMPLE_COUNT_1_BIT,
                 VK_FORMAT_R8G8B8A8_SRGB,
                 VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                    VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                    VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 image,
                 memory);
 
-    transitionImageLayout(image,
-                          VK_FORMAT_R8G8B8A8_SRGB,
-                          VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                          mipLevels);
-    copyBufferToImage(
-        stagingBuffer, image, SXI_TO_U32(width), SXI_TO_U32(height));
-    generateMipmaps(image,
-                    VK_FORMAT_R8G8B8A8_SRGB,
-                    SXI_TO_I32(width),
-                    SXI_TO_I32(height),
-                    mipLevels);
+    transitionImageLayout(
+        image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+    copyBufferToImage(stagingBuffer, image, SXI_TO_U32(width), SXI_TO_U32(height));
+    generateMipmaps(image, VK_FORMAT_R8G8B8A8_SRGB, SXI_TO_I32(width), SXI_TO_I32(height), mipLevels);
 
     vkDestroyBuffer(context->logicalDevice, stagingBuffer, nullptr);
     vkFreeMemory(context->logicalDevice, stagingBufferMem, nullptr);
 
-    imageView = createImageView(
-        image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
+    imageView = createImageView(image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -96,8 +82,7 @@ void Texture::createVkResources()
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.anisotropyEnable = VK_TRUE;
-    samplerInfo.maxAnisotropy =
-        context->currentPhysicalDevice().properties.limits.maxSamplerAnisotropy;
+    samplerInfo.maxAnisotropy = context->currentPhysicalDevice().properties.limits.maxSamplerAnisotropy;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
     samplerInfo.compareEnable = VK_FALSE;
@@ -107,22 +92,16 @@ void Texture::createVkResources()
     samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
     samplerInfo.mipLodBias = 0.0f; // Optional
 
-    if (vkCreateSampler(
-            context->logicalDevice, &samplerInfo, nullptr, &sampler) !=
-        VK_SUCCESS)
+    if (vkCreateSampler(context->logicalDevice, &samplerInfo, nullptr, &sampler) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create texture sampler");
 
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = detail::context->descriptorPool;
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts =
-        &detail::context
-             ->descriptorSetLayouts[detail::DescriptorSetType::PerModel];
+    allocInfo.pSetLayouts = &detail::context->descriptorSetLayouts[detail::DescriptorSetType::PerModel];
 
-    if (vkAllocateDescriptorSets(detail::context->logicalDevice,
-                                 &allocInfo,
-                                 &descriptorSet) != VK_SUCCESS)
+    if (vkAllocateDescriptorSets(detail::context->logicalDevice, &allocInfo, &descriptorSet) != VK_SUCCESS)
         throw MemoryAllocationException("Failed to allocate descriptor set");
 
     VkDescriptorImageInfo imageInfo{};
@@ -139,7 +118,6 @@ void Texture::createVkResources()
     descriptorWrite.descriptorCount = 1;
     descriptorWrite.pImageInfo = &imageInfo;
 
-    vkUpdateDescriptorSets(
-        detail::context->logicalDevice, 1, &descriptorWrite, 0, nullptr);
+    vkUpdateDescriptorSets(detail::context->logicalDevice, 1, &descriptorWrite, 0, nullptr);
 }
-} // namespace sxi::renderer
+} // namespace sxi::renderer::detail

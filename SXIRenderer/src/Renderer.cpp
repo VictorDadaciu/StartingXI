@@ -1,13 +1,13 @@
 #include "Renderer.h"
 
-#include "Model.h"
 #include "SXICore/Exception.h"
-#include "Scene.h"
-#include "Texture.h"
 #include "detail/Buffer.h"
 #include "detail/Context.h"
 #include "detail/GraphicsPipeline.h"
+#include "detail/Model.h"
 #include "detail/RenderPass.h"
+#include "detail/Scene.h"
+#include "detail/Texture.h"
 #include "detail/Utils.h"
 #include "detail/Window.h"
 
@@ -28,29 +28,25 @@ static bool enableValidationLayers = true;
 
 static VkDebugUtilsMessengerEXT debugMessenger{};
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL
-debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-              VkDebugUtilsMessageTypeFlagsEXT messageType,
-              const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-              void *pUserData)
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                    VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                    void* pUserData)
 {
     if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        std::cout << "Validation layer: " << pCallbackData->pMessage
-                  << std::endl;
+        std::cout << "Validation layer: " << pCallbackData->pMessage << std::endl;
     }
 
     return VK_FALSE;
 }
 
-static VkResult createDebugUtilsMessengerEXT(
-    VkInstance instance,
-    const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
-    const VkAllocationCallbacks *pAllocator,
-    VkDebugUtilsMessengerEXT *pDebugMessenger)
+static VkResult createDebugUtilsMessengerEXT(VkInstance instance,
+                                             const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+                                             const VkAllocationCallbacks* pAllocator,
+                                             VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        instance, "vkCreateDebugUtilsMessengerEXT");
+    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr)
     {
         return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
@@ -61,26 +57,22 @@ static VkResult createDebugUtilsMessengerEXT(
     }
 }
 
-static void
-destroyDebugUtilsMessengerEXT(VkInstance instance,
-                              VkDebugUtilsMessengerEXT debugMessenger,
-                              const VkAllocationCallbacks *pAllocator)
+static void destroyDebugUtilsMessengerEXT(VkInstance instance,
+                                          VkDebugUtilsMessengerEXT debugMessenger,
+                                          const VkAllocationCallbacks* pAllocator)
 {
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
-        instance, "vkDestroyDebugUtilsMessengerEXT");
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr)
         func(instance, debugMessenger, pAllocator);
 }
 
-static void
-populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
+static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
 {
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                              VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                              VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -88,8 +80,7 @@ populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo)
     createInfo.pUserData = nullptr;
 }
 
-static bool
-checkValidationLayerSupport(const std::vector<const char *> &validationLayers)
+static bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers)
 {
     u32 layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -97,11 +88,11 @@ checkValidationLayerSupport(const std::vector<const char *> &validationLayers)
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-    for (const char *layerName : validationLayers)
+    for (const char* layerName : validationLayers)
     {
         bool layerFound = false;
 
-        for (const auto &layerProperties : availableLayers)
+        for (const auto& layerProperties : availableLayers)
         {
             if (strcmp(layerName, layerProperties.layerName) == 0)
             {
@@ -117,21 +108,17 @@ checkValidationLayerSupport(const std::vector<const char *> &validationLayers)
     return true;
 }
 
-static VkInstance
-createInstance(const std::vector<const char *> &validationLayers)
+static VkInstance createInstance(const std::vector<const char*>& validationLayers)
 {
     VkInstance instance;
 
     u32 extensionsCount{};
-    const char *const *SDL_extensions =
-        SDL_Vulkan_GetInstanceExtensions(&extensionsCount);
-    std::vector<const char *> extensions(SDL_extensions,
-                                         SDL_extensions + extensionsCount);
+    const char* const* SDL_extensions = SDL_Vulkan_GetInstanceExtensions(&extensionsCount);
+    std::vector<const char*> extensions(SDL_extensions, SDL_extensions + extensionsCount);
     if (enableValidationLayers)
     {
         if (!checkValidationLayerSupport(validationLayers))
-            throw InitializationException(
-                "Vulkan validation layers not supported by installed version.");
+            throw InitializationException("Vulkan validation layers not supported by installed version.");
 
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
@@ -157,8 +144,7 @@ createInstance(const std::vector<const char *> &validationLayers)
         createInfo.ppEnabledLayerNames = validationLayers.data();
 
         populateDebugMessengerCreateInfo(debugCreateInfo);
-        createInfo.pNext =
-            (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
     }
     else
     {
@@ -172,17 +158,17 @@ createInstance(const std::vector<const char *> &validationLayers)
     return instance;
 }
 
-static void setupDebugCallback(const VkInstance &instance)
+static void setupDebugCallback(const VkInstance& instance)
 {
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     populateDebugMessengerCreateInfo(createInfo);
 
-    if (createDebugUtilsMessengerEXT(
-            instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
+    if (createDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS)
         throw InitializationException("Failed to create debug messenger.");
 }
 
 static bool initialized = false;
+
 void init(u32 width, u32 height, bool releaseValidationLayers)
 {
     if (initialized)
@@ -195,16 +181,14 @@ void init(u32 width, u32 height, bool releaseValidationLayers)
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 
     enableValidationLayers |= releaseValidationLayers;
-    std::vector<const char *> validationLayers{};
+    std::vector<const char*> validationLayers{};
     if (enableValidationLayers)
         validationLayers.push_back("VK_LAYER_KHRONOS_validation");
 
     VkInstance instance = createInstance(validationLayers);
 
-    SDL_Window *sdlWindow{};
-    if (sdlWindow = SDL_CreateWindow(
-            "Mysterious Game", width, height, SDL_WINDOW_VULKAN);
-        sdlWindow == nullptr)
+    SDL_Window* sdlWindow{};
+    if (sdlWindow = SDL_CreateWindow("Mysterious Game", width, height, SDL_WINDOW_VULKAN); sdlWindow == nullptr)
         throw ResourceCreationException("Failed to create SDL window");
 
     VkSurfaceKHR surface{};
@@ -216,57 +200,46 @@ void init(u32 width, u32 height, bool releaseValidationLayers)
     detail::vertexBuffer = new detail::VertexBuffer();
     detail::indexBuffer = new detail::IndexBuffer();
     detail::uniformBuffers = new detail::UniformBuffer[MAX_FRAMES_IN_FLIGHT];
-    scene = new Scene(100);
+    detail::scene = new detail::Scene(100);
 
     initialized = true;
 }
 
-void addGraphicsPipeline(const std::vector<char> &vertCode,
-                         const std::vector<char> &fragCode)
+void addGraphicsPipeline(const std::vector<char>& vertCode, const std::vector<char>& fragCode)
 {
-    detail::basicLightingPipeline =
-        new detail::GraphicsPipeline(vertCode, fragCode);
+    detail::basicLightingPipeline = new detail::GraphicsPipeline(vertCode, fragCode);
 }
 
-ecs::TextureIndex addTexture(const std::string &path)
+ecs::TextureIndex addTexture(const std::string& path)
 {
-    ecs::TextureIndex texIndex(textures.size());
-    textures.push_back(new Texture(path));
+    ecs::TextureIndex texIndex(detail::textures.size());
+    detail::textures.push_back(new detail::Texture(path));
     return texIndex;
 }
 
-ecs::ModelIndex addModel(const std::string &path)
+ecs::ModelIndex addModel(const std::string& path)
 {
-    Model *model = new Model(path);
+    detail::Model* model = new detail::Model(path);
     // add to vertex buffer
     {
-        const std::vector<Vertex> &verts = model->verts;
+        const std::vector<detail::Vertex>& verts = model->verts;
         VkDeviceSize bufferSize = sizeof(verts[0]) * verts.size();
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMem;
         detail::createBuffer(bufferSize,
                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                              stagingBuffer,
                              stagingBufferMem);
 
-        void *data;
-        vkMapMemory(detail::context->logicalDevice,
-                    stagingBufferMem,
-                    0,
-                    bufferSize,
-                    0,
-                    &data);
+        void* data;
+        vkMapMemory(detail::context->logicalDevice, stagingBufferMem, 0, bufferSize, 0, &data);
         memcpy(data, verts.data(), (size_t)bufferSize);
         vkUnmapMemory(detail::context->logicalDevice, stagingBufferMem);
 
         model->vertexBufferOffset = detail::vertexBuffer->offset;
-        detail::copyBuffer(stagingBuffer,
-                           detail::vertexBuffer->buffer,
-                           bufferSize,
-                           detail::vertexBuffer->offset);
+        detail::copyBuffer(stagingBuffer, detail::vertexBuffer->buffer, bufferSize, detail::vertexBuffer->offset);
         detail::vertexBuffer->offset += bufferSize;
 
         vkDestroyBuffer(detail::context->logicalDevice, stagingBuffer, nullptr);
@@ -274,40 +247,31 @@ ecs::ModelIndex addModel(const std::string &path)
     }
     // add to index buffer
     {
-        const std::vector<u32> &indices = model->indices;
+        const std::vector<u32>& indices = model->indices;
         VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMem;
         detail::createBuffer(bufferSize,
                              VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                              stagingBuffer,
                              stagingBufferMem);
 
-        void *data;
-        vkMapMemory(detail::context->logicalDevice,
-                    stagingBufferMem,
-                    0,
-                    bufferSize,
-                    0,
-                    &data);
+        void* data;
+        vkMapMemory(detail::context->logicalDevice, stagingBufferMem, 0, bufferSize, 0, &data);
         memcpy(data, indices.data(), (size_t)bufferSize);
         vkUnmapMemory(detail::context->logicalDevice, stagingBufferMem);
 
         model->indexBufferOffset = detail::indexBuffer->offset;
-        detail::copyBuffer(stagingBuffer,
-                           detail::indexBuffer->buffer,
-                           bufferSize,
-                           detail::indexBuffer->offset);
+        detail::copyBuffer(stagingBuffer, detail::indexBuffer->buffer, bufferSize, detail::indexBuffer->offset);
         detail::indexBuffer->offset += bufferSize;
 
         vkDestroyBuffer(detail::context->logicalDevice, stagingBuffer, nullptr);
         vkFreeMemory(detail::context->logicalDevice, stagingBufferMem, nullptr);
     }
-    ecs::ModelIndex mdlIndex(models.size());
-    models.push_back(model);
+    ecs::ModelIndex mdlIndex(detail::models.size());
+    detail::models.push_back(model);
     return mdlIndex;
 }
 
@@ -318,21 +282,20 @@ void destroy()
 
     vkDeviceWaitIdle(detail::context->logicalDevice);
 
-    for (Texture *tex : textures)
+    for (detail::Texture* tex : detail::textures)
         delete tex;
-    for (Model *model : models)
+    for (detail::Model* model : detail::models)
         delete model;
     delete detail::vertexBuffer;
     delete detail::indexBuffer;
     delete[] detail::uniformBuffers;
-    delete scene;
+    delete detail::scene;
     if (detail::basicLightingPipeline)
         delete detail::basicLightingPipeline;
 
     delete detail::basicRenderPass;
     delete detail::window;
-    destroyDebugUtilsMessengerEXT(
-        detail::context->instance, debugMessenger, nullptr);
+    destroyDebugUtilsMessengerEXT(detail::context->instance, debugMessenger, nullptr);
     delete detail::context;
 
     SDL_Quit();

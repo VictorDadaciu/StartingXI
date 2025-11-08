@@ -44,16 +44,16 @@ static void loop()
         }
 
         mgr.forEntitiesMatching<MoveSignature>(
-            [&time](auto &, auto &posComponent)
+            [&time](auto&, auto& posComponent)
             {
                 static sxi::TimePoint start = time.time;
                 posComponent.pos.y = sinf(sxi::Time::elapsed(start, time.time));
             });
 
         mgr.forEntitiesMatching<RotateSignature>(
-            [&time](auto &, auto &yRotComponent)
+            [&time](auto&, auto& rotComponent)
             {
-                yRotComponent.rot += 0.1 * time.dt;
+                rotComponent.rot.y += 0.1 * time.dt;
             });
 
         sxi::renderer::render(mgr, time);
@@ -62,38 +62,29 @@ static void loop()
     }
 }
 
-int main(int argc, char *args[])
+int main(int argc, char* args[])
 {
     sxi::renderer::init(1600, 900);
-    sxi::renderer::addGraphicsPipeline(
-        sxi::file::readFileAsBytes(SHADERS_GEN_PATH +
-                                   "basic_lighting.vert.spv"),
-        sxi::file::readFileAsBytes(SHADERS_GEN_PATH +
-                                   "basic_lighting.frag.spv"));
+    sxi::renderer::addGraphicsPipeline(sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.vert.spv"),
+                                       sxi::file::readFileAsBytes(SHADERS_GEN_PATH + "basic_lighting.frag.spv"));
 
     {
         sxi::ecs::EntityIndex<Object> ent = mgr.createEntity<Object>();
-        sxi::ecs::RenderComponent &render =
-            mgr.component<sxi::ecs::RenderComponent>(ent);
+        sxi::ecs::RenderComponent& render = mgr.component<sxi::ecs::RenderComponent>(ent);
         render.mdl = sxi::renderer::addModel(MODELS_PATH + "Coffee_Table.obj");
-        render.tex =
-            sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
-        sxi::ecs::PositionComponent &pos =
-            mgr.component<sxi::ecs::PositionComponent>(ent);
+        render.tex = sxi::renderer::addTexture(TEXTURES_PATH + "table_basecolor.png");
+        sxi::ecs::PositionComponent& pos = mgr.component<sxi::ecs::PositionComponent>(ent);
         pos.pos = glm::vec3(20, 0, 20);
     }
     {
         sxi::ecs::EntityIndex<Object> ent = mgr.createEntity<Object>();
-        sxi::ecs::RenderComponent &render =
-            mgr.component<sxi::ecs::RenderComponent>(ent);
+        sxi::ecs::RenderComponent& render = mgr.component<sxi::ecs::RenderComponent>(ent);
         render.mdl = sxi::renderer::addModel(MODELS_PATH + "Rocking_Chair.obj");
-        render.tex =
-            sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
-        sxi::ecs::PositionComponent &pos =
-            mgr.component<sxi::ecs::PositionComponent>(ent);
+        render.tex = sxi::renderer::addTexture(TEXTURES_PATH + "chair_basecolor.png");
+        sxi::ecs::PositionComponent& pos = mgr.component<sxi::ecs::PositionComponent>(ent);
         pos.pos = glm::vec3(-20, 0, 20);
     }
-    mgr.createEntity<Light>();
+    mgr.createEntity<sxi::ecs::Light>();
     mgr.refresh();
 
     loop();

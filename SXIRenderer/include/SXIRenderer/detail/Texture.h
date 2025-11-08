@@ -6,11 +6,11 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-namespace sxi::renderer
+namespace sxi::renderer::detail
 {
 struct Texture
 {
-    unsigned char *raw{};
+    unsigned char* raw{};
     u64 size;
     int width{};
     int height{};
@@ -23,12 +23,12 @@ struct Texture
     VkDeviceMemory memory{};
     VkSampler sampler{};
 
-    Texture(const std::string &);
-    Texture(Texture &) = delete;
-    Texture(Texture &&) = default;
+    Texture(const std::string&);
+    Texture(Texture&) = delete;
+    Texture(Texture&&) = default;
 
-    Texture &operator=(Texture &) = delete;
-    Texture &operator=(Texture &&) = default;
+    Texture& operator=(Texture&) = delete;
+    Texture& operator=(Texture&&) = default;
 
     ~Texture();
 
@@ -36,5 +36,5 @@ private:
     void createVkResources();
 };
 
-extern std::vector<Texture *> textures;
-} // namespace sxi::renderer
+extern std::vector<Texture*> textures;
+} // namespace sxi::renderer::detail

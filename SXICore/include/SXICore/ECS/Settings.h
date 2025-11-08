@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../MPL/Concat.h"
 #include "../MPL/Contains.h"
 #include "../MPL/Count.h"
 #include "../MPL/Filter.h"
@@ -25,18 +26,17 @@ using Archetype = sxi::mpl::typelist<Ts...>;
 template <typename... Ts>
 using ArchetypeList = sxi::mpl::typelist<Ts...>;
 
-template <typename TComponentList,
-          typename TTagList,
-          typename TArchetypeList,
-          typename TSignatureList>
+template <typename TypeList, typename... Ts>
+using FinalizeList = mpl::Concat<TypeList, Ts...>;
+
+template <typename TComponentList, typename TTagList, typename TArchetypeList, typename TSignatureList>
 struct Settings
 {
     using ComponentList = TComponentList;
     using TagList = TTagList;
     using ArchetypeList = TArchetypeList;
     using SignatureList = TSignatureList;
-    using TSettings =
-        Settings<ComponentList, TagList, ArchetypeList, SignatureList>;
+    using TSettings = Settings<ComponentList, TagList, ArchetypeList, SignatureList>;
 
     template <typename T>
     static constexpr bool isComponent() noexcept
@@ -62,25 +62,13 @@ struct Settings
         return mpl::Contains<T, SignatureList>::value;
     }
 
-    static constexpr size_t componentCount() noexcept
-    {
-        return mpl::Count<ComponentList>::value;
-    }
+    static constexpr size_t componentCount() noexcept { return mpl::Count<ComponentList>::value; }
 
-    static constexpr size_t tagCount() noexcept
-    {
-        return mpl::Count<TagList>::value;
-    }
+    static constexpr size_t tagCount() noexcept { return mpl::Count<TagList>::value; }
 
-    static constexpr size_t archetypeCount() noexcept
-    {
-        return mpl::Count<ArchetypeList>::value;
-    }
+    static constexpr size_t archetypeCount() noexcept { return mpl::Count<ArchetypeList>::value; }
 
-    static constexpr size_t signatureCount() noexcept
-    {
-        return mpl::Count<SignatureList>::value;
-    }
+    static constexpr size_t signatureCount() noexcept { return mpl::Count<SignatureList>::value; }
 
     template <typename T>
     static constexpr size_t componentId() noexcept

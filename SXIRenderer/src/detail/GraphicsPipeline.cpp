@@ -1,9 +1,9 @@
 #include "detail/GraphicsPipeline.h"
 
-#include "Model.h"
 #include "SXICore/Exception.h"
 #include "SXICore/Types.h"
 #include "detail/Context.h"
+#include "detail/Model.h"
 #include "detail/RenderPass.h"
 #include "detail/Utils.h"
 
@@ -11,8 +11,7 @@ namespace sxi::renderer::detail
 {
 GraphicsPipeline* basicLightingPipeline{};
 
-GraphicsPipeline::GraphicsPipeline(const std::vector<char>& vertCode,
-                                   const std::vector<char>& fragCode)
+GraphicsPipeline::GraphicsPipeline(const std::vector<char>& vertCode, const std::vector<char>& fragCode)
 {
     createLayout();
     createPipeline(vertCode, fragCode);
@@ -30,64 +29,51 @@ void GraphicsPipeline::createLayout()
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
-    pipelineLayoutInfo.setLayoutCount =
-        SXI_TO_U32(context->descriptorSetLayouts.size());
+    pipelineLayoutInfo.setLayoutCount = SXI_TO_U32(context->descriptorSetLayouts.size());
     pipelineLayoutInfo.pSetLayouts = context->descriptorSetLayouts.data();
 
-    if (vkCreatePipelineLayout(
-            context->logicalDevice, &pipelineLayoutInfo, nullptr, &layout) !=
-        VK_SUCCESS)
+    if (vkCreatePipelineLayout(context->logicalDevice, &pipelineLayoutInfo, nullptr, &layout) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create pipeline layout");
 }
 
-void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode,
-                                      const std::vector<char>& fragCode)
+void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode, const std::vector<char>& fragCode)
 {
     VkShaderModule vertModule = createShaderModule(vertCode);
     VkShaderModule fragModule = createShaderModule(fragCode);
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-    vertShaderStageInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vertShaderStageInfo.module = vertModule;
     vertShaderStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-    fragShaderStageInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     fragShaderStageInfo.module = fragModule;
     fragShaderStageInfo.pName = "main";
 
-    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo,
-                                                      fragShaderStageInfo};
+    VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
-                                                 VK_DYNAMIC_STATE_SCISSOR};
+    std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
     VkPipelineDynamicStateCreateInfo dynamicState{};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamicState.dynamicStateCount = SXI_TO_U32(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    VkVertexInputBindingDescription bindingDesc =
-        Vertex::getBindingDescription();
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescs =
-        Vertex::getAttributeDescription();
+    VkVertexInputBindingDescription bindingDesc = Vertex::getBindingDescription();
+    std::array<VkVertexInputAttributeDescription, 3> attributeDescs = Vertex::getAttributeDescription();
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDesc;
-    vertexInputInfo.vertexAttributeDescriptionCount =
-        SXI_TO_U32(attributeDescs.size());
+    vertexInputInfo.vertexAttributeDescriptionCount = SXI_TO_U32(attributeDescs.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescs.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
-    inputAssembly.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
@@ -97,8 +83,7 @@ void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode,
     viewportState.scissorCount = 1;
 
     VkPipelineRasterizationStateCreateInfo rasterizer{};
-    rasterizer.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
@@ -110,11 +95,9 @@ void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode,
     rasterizer.depthBiasClamp = 0.0f;
     rasterizer.depthBiasSlopeFactor = 0.0f;
 
-    VkSampleCountFlagBits samples =
-        context->currentPhysicalDevice().maxMSAASamples;
+    VkSampleCountFlagBits samples = context->currentPhysicalDevice().maxMSAASamples;
     VkPipelineMultisampleStateCreateInfo multisampling{};
-    multisampling.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_TRUE;
     multisampling.minSampleShading = 0.2f;
     multisampling.rasterizationSamples = samples;
@@ -123,22 +106,18 @@ void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode,
     multisampling.alphaToOneEnable = VK_FALSE;
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                                          VK_COLOR_COMPONENT_G_BIT |
-                                          VK_COLOR_COMPONENT_B_BIT |
-                                          VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_TRUE;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    colorBlendAttachment.dstColorBlendFactor =
-        VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
     colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.logicOp = VK_LOGIC_OP_COPY;
     colorBlending.attachmentCount = 1;
@@ -149,8 +128,7 @@ void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode,
     colorBlending.blendConstants[3] = 0.0f;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
-    depthStencil.sType =
-        VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
     depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
@@ -179,12 +157,8 @@ void GraphicsPipeline::createPipeline(const std::vector<char>& vertCode,
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
 
-    if (vkCreateGraphicsPipelines(context->logicalDevice,
-                                  VK_NULL_HANDLE,
-                                  1,
-                                  &pipelineInfo,
-                                  nullptr,
-                                  &pipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(context->logicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) !=
+        VK_SUCCESS)
         throw ResourceCreationException("Failed to create graphics pipeline");
 
     vkDestroyShaderModule(context->logicalDevice, fragModule, nullptr);

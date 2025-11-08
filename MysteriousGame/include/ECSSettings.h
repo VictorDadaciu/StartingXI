@@ -1,45 +1,25 @@
 #pragma once
 
 #include "SXICore/ECS/Settings.h"
-#include "SXICore/components/PositionComponent.h"
-#include "SXICore/components/YRotationComponent.h"
-#include "SXIRenderer/components/RenderComponent.h"
-#include "SXIRenderer/tags/LightTag.h"
+#include "SXICore/ECSConfig.h"
+#include "SXIRenderer/ECSConfig.h"
 
-using Components = sxi::ecs::ComponentList<sxi::ecs::PositionComponent,
-                                           sxi::ecs::YRotationComponent,
-                                           sxi::ecs::RenderComponent>;
+using Components = sxi::ecs::FinalizeList<sxi::ecs::SXI_CoreComponents, sxi::ecs::SXI_RendererComponents>;
 
 struct ObjectTag
 {
 };
 
-using Tags = sxi::ecs::TagList<sxi::ecs::LightTag, ObjectTag>;
+using Tags = sxi::ecs::FinalizeList<sxi::ecs::SXI_RendererTags, sxi::ecs::TagList<ObjectTag>>;
 
-using Object = sxi::ecs::Archetype<sxi::ecs::PositionComponent,
-                                   sxi::ecs::YRotationComponent,
-                                   sxi::ecs::RenderComponent,
-                                   ObjectTag>;
-using Light =
-    sxi::ecs::Archetype<sxi::ecs::PositionComponent, sxi::ecs::LightTag>;
-using Archetypes = sxi::ecs::ArchetypeList<Object, Light>;
+using Object =
+    sxi::ecs::Archetype<sxi::ecs::PositionComponent, sxi::ecs::RotationComponent, sxi::ecs::RenderComponent, ObjectTag>;
+using Archetypes = sxi::ecs::FinalizeList<sxi::ecs::SXI_RendererArchetypes, sxi::ecs::ArchetypeList<Object>>;
 
-using RotateSignature =
-    sxi::ecs::Signature<sxi::ecs::YRotationComponent, ObjectTag>;
-using MoveSignature =
-    sxi::ecs::Signature<sxi::ecs::PositionComponent, ObjectTag>;
-using CalculateDescriptorsSignature =
-    sxi::ecs::Signature<sxi::ecs::PositionComponent,
-                        sxi::ecs::YRotationComponent,
-                        sxi::ecs::RenderComponent>;
-using LightSignature =
-    sxi::ecs::Signature<sxi::ecs::PositionComponent, sxi::ecs::LightTag>;
-using RenderSignature = sxi::ecs::Signature<sxi::ecs::RenderComponent>;
-using Signatures = sxi::ecs::SignatureList<RotateSignature,
-                                           MoveSignature,
-                                           CalculateDescriptorsSignature,
-                                           RenderSignature,
-                                           LightSignature>;
+using RotateSignature = sxi::ecs::Signature<sxi::ecs::RotationComponent, ObjectTag>;
+using MoveSignature = sxi::ecs::Signature<sxi::ecs::PositionComponent, ObjectTag>;
 
-using ECSSettings =
-    sxi::ecs::Settings<Components, Tags, Archetypes, Signatures>;
+using Signatures =
+    sxi::ecs::FinalizeList<sxi::ecs::SXI_RendererSignatures, sxi::ecs::SignatureList<RotateSignature, MoveSignature>>;
+
+using ECSSettings = sxi::ecs::Settings<Components, Tags, Archetypes, Signatures>;

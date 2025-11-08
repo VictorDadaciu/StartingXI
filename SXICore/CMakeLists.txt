@@ -24,8 +24,7 @@ add_library(${PROJECT_NAME} STATIC
             include/${PROJECT_NAME}/ECS/Entity.h
             include/${PROJECT_NAME}/ECS/Manager.h
             include/${PROJECT_NAME}/ECS/detail/ArchetypeStorage.h
-            include/${PROJECT_NAME}/components/PositionComponent.h
-            include/${PROJECT_NAME}/components/YRotationComponent.h
+            include/${PROJECT_NAME}/ECSConfig.h
             include/${PROJECT_NAME}/Exception.h
             include/${PROJECT_NAME}/File.h
             include/${PROJECT_NAME}/Timing.h

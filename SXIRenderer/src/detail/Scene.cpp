@@ -1,11 +1,11 @@
-#include "Scene.h"
+#include "detail/Scene.h"
 
 #include "SXICore/Exception.h"
 #include "detail/Buffer.h"
 
-namespace sxi::renderer
+namespace sxi::renderer::detail
 {
-Scene *scene{};
+Scene* scene{};
 
 SceneData::SceneData(u8 maxObjects, u8 frame) : frame(frame)
 {
@@ -20,13 +20,9 @@ void SceneData::createFrameDescriptorSet()
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = detail::context->descriptorPool;
     allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts =
-        &detail::context
-             ->descriptorSetLayouts[detail::DescriptorSetType::PerFrame];
+    allocInfo.pSetLayouts = &detail::context->descriptorSetLayouts[detail::DescriptorSetType::PerFrame];
 
-    if (vkAllocateDescriptorSets(detail::context->logicalDevice,
-                                 &allocInfo,
-                                 &frameDescriptorSet) != VK_SUCCESS)
+    if (vkAllocateDescriptorSets(detail::context->logicalDevice, &allocInfo, &frameDescriptorSet) != VK_SUCCESS)
         throw MemoryAllocationException("Failed to allocate descriptor set");
 
     VkDescriptorBufferInfo uboInfo{};
@@ -39,8 +35,7 @@ void SceneData::createFrameDescriptorSet()
     lightInfo.offset = sizeof(FrameUBO);
     lightInfo.range = sizeof(FrameLight);
 
-    detail::uniformBuffers[frame].offset =
-        sizeof(FrameUBO) + sizeof(FrameLight);
+    detail::uniformBuffers[frame].offset = sizeof(FrameUBO) + sizeof(FrameLight);
 
     std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
     descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -59,19 +54,14 @@ void SceneData::createFrameDescriptorSet()
     descriptorWrites[1].descriptorCount = 1;
     descriptorWrites[1].pBufferInfo = &lightInfo;
 
-    vkUpdateDescriptorSets(detail::context->logicalDevice,
-                           SXI_TO_U32(descriptorWrites.size()),
-                           descriptorWrites.data(),
-                           0,
-                           nullptr);
+    vkUpdateDescriptorSets(
+        detail::context->logicalDevice, SXI_TO_U32(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
 void SceneData::createObjectDescriptorSets()
 {
     std::vector<VkDescriptorSetLayout> pSetLayouts(
-        objectDescriptorSets.size(),
-        detail::context
-            ->descriptorSetLayouts[detail::DescriptorSetType::PerObject]);
+        objectDescriptorSets.size(), detail::context->descriptorSetLayouts[detail::DescriptorSetType::PerObject]);
 
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -79,9 +69,7 @@ void SceneData::createObjectDescriptorSets()
     allocInfo.descriptorSetCount = SXI_TO_U32(objectDescriptorSets.size());
     allocInfo.pSetLayouts = pSetLayouts.data();
 
-    if (vkAllocateDescriptorSets(detail::context->logicalDevice,
-                                 &allocInfo,
-                                 objectDescriptorSets.data()) != VK_SUCCESS)
+    if (vkAllocateDescriptorSets(detail::context->logicalDevice, &allocInfo, objectDescriptorSets.data()) != VK_SUCCESS)
         throw MemoryAllocationException("Failed to allocate descriptor sets");
 
     for (size_t i = 0; i < objectDescriptorSets.size(); ++i)
@@ -101,8 +89,7 @@ void SceneData::createObjectDescriptorSets()
         writeDescriptorSet.descriptorCount = 1;
         writeDescriptorSet.pBufferInfo = &uboInfo;
 
-        vkUpdateDescriptorSets(
-            detail::context->logicalDevice, 1, &writeDescriptorSet, 0, nullptr);
+        vkUpdateDescriptorSets(detail::context->logicalDevice, 1, &writeDescriptorSet, 0, nullptr);
     }
 }
 
@@ -112,4 +99,4 @@ Scene::Scene(u8 maxObjects)
     for (size_t i = 0; i < sceneDatas.size(); ++i)
         sceneDatas[i] = SceneData(maxObjects, SXI_TO_U8(i));
 }
-} // namespace sxi::renderer
+} // namespace sxi::renderer::detail
