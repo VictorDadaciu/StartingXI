@@ -3,27 +3,35 @@
 #include "IsSame.h"
 #include "TypeList.h"
 
+#include <type_traits>
+
 namespace sxi::mpl
 {
-template <typename T, class typelist>
-struct Contains;
-
-template <typename T>
-struct Contains<T, typelist<>>
+namespace detail
 {
-    static constexpr bool value = false;
-};
+    template<typename T, class typelist>
+    struct ContainsHelper;
 
-template <typename T, typename... Tail>
-struct Contains<T, typelist<T, Tail...>>
-{
-    static constexpr bool value = true;
-};
+    template<typename T>
+    struct ContainsHelper<T, typelist<>>
+    {
+        static constexpr bool value = false;
+    };
 
-template <typename T, typename Head, typename... Tail>
-struct Contains<T, typelist<Head, Tail...>>
-{
-    static constexpr bool value =
-        IsSame<T, Head>::value || Contains<T, typelist<Tail...>>::value;
-};
+    template<typename T, typename... Tail>
+    struct ContainsHelper<T, typelist<T, Tail...>>
+    {
+        static constexpr bool value = true;
+    };
+
+    template<typename T, typename Head, typename... Tail>
+    struct ContainsHelper<T, typelist<Head, Tail...>>
+    {
+        static constexpr bool value = IsSame<T, Head>::value || ContainsHelper<T, typelist<Tail...>>::value;
+    };
+} // namespace detail
+
+template<typename T, class List>
+using Contains = std::bool_constant<detail::ContainsHelper<T, List>::value>;
+
 } // namespace sxi::mpl

@@ -28,7 +28,7 @@ ecs::ModelIndex addModel(const std::string&);
 
 namespace detail
 {
-    template <typename TSettings>
+    template<typename TSettings>
     void
     recordCommandBuffer(ecs::Manager<TSettings> mgr, VkCommandBuffer commandBuffer, u32 imageIndex, u32 currentFrame)
     {
@@ -109,7 +109,9 @@ namespace detail
                                         nullptr);
 
                 vkCmdDrawIndexed(commandBuffer, SXI_TO_U32(model->indices.size()), 1, 0, 0, 0);
-            });
+            },
+            0,
+            100);
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -118,7 +120,7 @@ namespace detail
     }
 } // namespace detail
 
-template <typename TSettings>
+template<typename TSettings>
 void render(ecs::Manager<TSettings>& mgr, const Time& time)
 {
     detail::scene->run(mgr, time);

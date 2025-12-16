@@ -13,7 +13,6 @@ using i8 = int8_t;
 using i16 = int16_t;
 using i32 = int32_t;
 using i64 = int64_t;
-} // namespace sxi
 
 #define SXI_TO_SIZE(x) static_cast<size_t>(x)
 #define SXI_TO_U8(x) static_cast<sxi::u8>(x)
@@ -24,3 +23,4 @@ using i64 = int64_t;
 #define SXI_TO_I16(x) static_cast<sxi::i16>(x)
 #define SXI_TO_I32(x) static_cast<sxi::i32>(x)
 #define SXI_TO_I64(x) static_cast<sxi::i64>(x)
+} // namespace sxi

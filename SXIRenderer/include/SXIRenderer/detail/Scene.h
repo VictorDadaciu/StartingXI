@@ -59,7 +59,7 @@ public:
     Scene(u8);
     ~Scene() = default;
 
-    template <typename TSettings>
+    template<typename TSettings>
     void run(ecs::Manager<TSettings>& mgr, const Time& time)
     {
         u8 currentFrame = context->currentFrame();
@@ -86,7 +86,9 @@ public:
                     FrameLight{glm::vec4(posComponent.pos.x, posComponent.pos.y, posComponent.pos.z, 1.f)};
                 offset += sizeof(FrameUBO);
                 memcpy(offset, &this->frameLight, sizeof(FrameLight));
-            });
+            },
+            0,
+            100);
 
         char* offset = (char*)detail::uniformBuffers[currentFrame].mapped + sizeof(FrameUBO) + sizeof(FrameLight);
         mgr.template forEntitiesMatching<ecs::SXI_RenderObjectSignature>(
@@ -95,7 +97,9 @@ public:
                 glm::mat4 translation = glm::translate(glm::mat4(1.0f), posComponent.pos);
                 glm::mat4 rotation = glm::eulerAngleYXZ(rotComponent.rot.y, rotComponent.rot.x, rotComponent.rot.z);
                 this->objectUBOs[entityIndex].model = translation * rotation;
-            });
+            },
+            0,
+            100);
         memcpy(offset, objectUBOs.data(), objectUBOs.size() * sizeof(ObjectUBO));
     }
 

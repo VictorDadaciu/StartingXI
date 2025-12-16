@@ -11,17 +11,16 @@
 
 namespace sxi::ecs::detail
 {
-template <typename TSettings, typename TArchetype>
+template<typename TSettings, typename TArchetype>
 class ArchetypeStorage final
 {
     size_t size{};
     size_t newSize{};
     size_t capacity{};
 
-    using ArchetypeComponents =
-        mpl::Filter<TSettings::template IsComponentFilter, TArchetype>;
+    using ArchetypeComponents = mpl::Filter<TSettings::template IsComponentFilter, TArchetype>;
 
-    template <typename... Ts>
+    template<typename... Ts>
     using TupleOfVectors = std::tuple<std::vector<Ts>...>;
     sxi::mpl::Rename<TupleOfVectors, ArchetypeComponents> components;
 
@@ -34,7 +33,7 @@ class ArchetypeStorage final
 
         entities.resize(newCapacity);
         sxi::mpl::forTuple(
-            [newCapacity](auto &c)
+            [newCapacity](auto& c)
             {
                 c.resize(newCapacity);
             },
@@ -54,51 +53,37 @@ class ArchetypeStorage final
         reserve(2 * capacity);
     }
 
-    [[nodiscard]] Entity<TArchetype> &
-    entity(EntityIndex<TArchetype> index) noexcept
+    [[nodiscard]] Entity<TArchetype>& entity(EntityIndex<TArchetype> index) noexcept { return entities[index]; }
+
+    [[nodiscard]] const Entity<TArchetype>& entity(EntityIndex<TArchetype> index) const noexcept
     {
         return entities[index];
     }
 
-    [[nodiscard]] const Entity<TArchetype> &
-    entity(EntityIndex<TArchetype> index) const noexcept
-    {
-        return entities[index];
-    }
-
-    [[nodiscard]] EntityHandleData<TArchetype> &
-    entityHandleData(const EntityHandle<TArchetype> &handle) noexcept
+    [[nodiscard]] EntityHandleData<TArchetype>& entityHandleData(const EntityHandle<TArchetype>& handle) noexcept
     {
         return handleDatas[handle.handleDataIndex];
     }
 
-    [[nodiscard]] const EntityHandleData<TArchetype> &
-    entityHandleData(const EntityHandle<TArchetype> &handle) const noexcept
+    [[nodiscard]] const EntityHandleData<TArchetype>&
+    entityHandleData(const EntityHandle<TArchetype>& handle) const noexcept
     {
         return handleDatas[handle.handleDataIndex];
     }
 
-    [[nodiscard]] EntityHandleData<TArchetype> &
-    entityHandleData(EntityIndex<TArchetype> index) noexcept
+    [[nodiscard]] EntityHandleData<TArchetype>& entityHandleData(EntityIndex<TArchetype> index) noexcept
     {
         return handleDatas[entity(index).handleDataIndex];
     }
 
-    [[nodiscard]] const EntityHandleData<TArchetype> &
-    entityHandleData(EntityIndex<TArchetype> index) const noexcept
+    [[nodiscard]] const EntityHandleData<TArchetype>& entityHandleData(EntityIndex<TArchetype> index) const noexcept
     {
         return handleDatas[entity(index).handleDataIndex];
     }
 
-    void invalidateHandle(EntityIndex<TArchetype> index) noexcept
-    {
-        ++entityHandleData(index).counter;
-    }
+    void invalidateHandle(EntityIndex<TArchetype> index) noexcept { ++entityHandleData(index).counter; }
 
-    void refreshHandle(EntityIndex<TArchetype> index) noexcept
-    {
-        entityHandleData(index).index = index;
-    }
+    void refreshHandle(EntityIndex<TArchetype> index) noexcept { entityHandleData(index).index = index; }
 
     [[nodiscard]] size_t refreshImpl() noexcept
     {
@@ -135,7 +120,7 @@ class ArchetypeStorage final
             refreshHandle(right);
 
             sxi::mpl::forTuple(
-                [left, right](auto &c)
+                [left, right](auto& c)
                 {
                     std::swap(c[left], c[right]);
                 },
@@ -146,13 +131,11 @@ class ArchetypeStorage final
         return right;
     }
 
-    template <typename... Ts>
+    template<typename... Ts>
     struct ExpandCallHelper
     {
-        template <typename Func>
-        static void call(EntityIndex<TArchetype> index,
-                         ArchetypeStorage<TSettings, TArchetype> &as,
-                         Func &&func)
+        template<typename Func>
+        static void call(EntityIndex<TArchetype> index, ArchetypeStorage<TSettings, TArchetype>& as, Func&& func)
         {
             func(index, as.template component<Ts>(index)...);
         }
@@ -172,7 +155,7 @@ public:
 
         EntityIndex<TArchetype> freeIndex{newSize++};
 
-        Entity<TArchetype> &e = entities[freeIndex];
+        Entity<TArchetype>& e = entities[freeIndex];
         assert(!e.alive);
         e.handleDataIndex = std::numeric_limits<size_t>::max();
         e.alive = true;
@@ -180,8 +163,7 @@ public:
         return freeIndex;
     }
 
-    [[nodiscard]] EntityHandle<TArchetype>
-    createHandle(EntityIndex<TArchetype> index)
+    [[nodiscard]] EntityHandle<TArchetype> createHandle(EntityIndex<TArchetype> index)
     {
         EntityHandleDataIndex<TArchetype> freeIndex{handleDatas.size()};
         entity(index).handleDataIndex = freeIndex;
@@ -195,44 +177,35 @@ public:
         return handle;
     }
 
-    [[nodiscard]] bool
-    isEntityHandleValid(const EntityHandle<TArchetype> &handle) const noexcept
+    [[nodiscard]] bool isEntityHandleValid(const EntityHandle<TArchetype>& handle) const noexcept
     {
         return entityHandleData(handle).counter == handle.counter;
     }
 
-    template <typename TComponent>
-    [[nodiscard]] TComponent &component(EntityIndex<TArchetype> index) noexcept
+    template<typename TComponent>
+    [[nodiscard]] TComponent& component(EntityIndex<TArchetype> index) noexcept
     {
         return std::get<std::vector<TComponent>>(components)[index];
     }
 
-    template <typename TComponent>
-    [[nodiscard]] const TComponent &
-    component(EntityIndex<TArchetype> index) const noexcept
+    template<typename TComponent>
+    [[nodiscard]] const TComponent& component(EntityIndex<TArchetype> index) const noexcept
     {
         return std::get<std::vector<TComponent>>(components)[index];
     }
 
-    bool isAlive(EntityIndex<TArchetype> index) const noexcept
-    {
-        return entity(index).alive;
-    }
+    bool isAlive(EntityIndex<TArchetype> index) const noexcept { return entity(index).alive; }
 
-    void kill(EntityIndex<TArchetype> index) noexcept
-    {
-        entity(index).alive = false;
-    }
+    void kill(EntityIndex<TArchetype> index) noexcept { entity(index).alive = false; }
 
-    bool isAlive(const EntityHandle<TArchetype> &handle) const noexcept
+    bool isAlive(const EntityHandle<TArchetype>& handle) const noexcept
     {
         return entity(entityHandleData(handle).index).alive;
     }
 
-    void kill(const EntityHandle<TArchetype> &handle) noexcept
-    {
-        entity(entityHandleData(handle).index).alive = false;
-    }
+    size_t entityCount() const noexcept { return size; }
+
+    void kill(const EntityHandle<TArchetype>& handle) noexcept { entity(entityHandleData(handle).index).alive = false; }
 
     void refresh() noexcept
     {
@@ -245,22 +218,21 @@ public:
         size = newSize = refreshImpl();
     }
 
-    template <typename Func>
-    void forEntities(Func &&func)
+    template<typename Func>
+    void forEntities(Func&& func, size_t start, size_t end)
     {
-        for (EntityIndex<TArchetype> i{0}; i < size; ++i)
+        for (EntityIndex<TArchetype> i{start}; i < std::min(end, size); ++i)
             func(i);
     }
 
-    template <typename TSignature, typename Func>
-    void forComponents(Func &&func)
+    template<typename TSignature, typename Func>
+    void forComponents(Func&& func, size_t start, size_t end)
     {
         if constexpr (mpl::IsSubset<TArchetype, TSignature>::value)
         {
-            using RequiredComponents =
-                mpl::Filter<TSettings::template IsComponentFilter, TSignature>;
+            using RequiredComponents = mpl::Filter<TSettings::template IsComponentFilter, TSignature>;
             using Helper = mpl::Rename<ExpandCallHelper, RequiredComponents>;
-            for (EntityIndex<TArchetype> i{0}; i < size; ++i)
+            for (EntityIndex<TArchetype> i{start}; i < std::min(end, size); ++i)
                 Helper::call(i, *this, func);
         }
     }

@@ -6,32 +6,28 @@ namespace sxi::mpl
 {
 namespace detail
 {
-    template <template <typename> typename Func, typename List>
-    struct Map;
+    template<template<typename> typename Func, typename List>
+    struct MapHelper;
 
-    template <template <typename> typename Func,
-              typename Head,
-              typename... Tail>
-    struct Map<Func, typelist<Head, Tail...>>
+    template<template<typename> typename Func, typename Head, typename... Tail>
+    struct MapHelper<Func, typelist<Head, Tail...>>
     {
-        using type =
-            PushFront<Func<Head>,
-                      typename Map<Func, typelist<Tail...>>::type>::type;
+        using type = PushFront<Func<Head>, typename MapHelper<Func, typelist<Tail...>>::type>::type;
     };
 
-    template <template <typename> typename Func, typename Head>
-    struct Map<Func, typelist<Head>>
+    template<template<typename> typename Func, typename Head>
+    struct MapHelper<Func, typelist<Head>>
     {
         using type = typelist<Func<Head>>;
     };
 
-    template <template <typename> typename Func>
-    struct Map<Func, typelist<>>
+    template<template<typename> typename Func>
+    struct MapHelper<Func, typelist<>>
     {
         using type = typelist<>;
     };
 } // namespace detail
 
-template <template <typename> class Func, typename TypeList>
-using Map = typename detail::Map<Func, TypeList>::type;
+template<template<typename> class Func, typename TypeList>
+using Map = typename detail::MapHelper<Func, TypeList>::type;
 } // namespace sxi::mpl

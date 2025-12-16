@@ -6,30 +6,32 @@
 #include "../MPL/Filter.h"
 #include "../MPL/IndexOf.h"
 #include "../MPL/TypeList.h"
+#include "SXICore/MPL/IsSubset.h"
+#include "SXICore/MPL/Supersets.h"
 
 #include <type_traits>
 
 namespace sxi::ecs
 {
-template <typename... Ts>
+template<typename... Ts>
 using Signature = sxi::mpl::typelist<Ts...>;
-template <typename... Ts>
+template<typename... Ts>
 using SignatureList = sxi::mpl::typelist<Ts...>;
 
-template <typename... Ts>
+template<typename... Ts>
 using ComponentList = sxi::mpl::typelist<Ts...>;
-template <typename... Ts>
+template<typename... Ts>
 using TagList = sxi::mpl::typelist<Ts...>;
 
-template <typename... Ts>
+template<typename... Ts>
 using Archetype = sxi::mpl::typelist<Ts...>;
-template <typename... Ts>
+template<typename... Ts>
 using ArchetypeList = sxi::mpl::typelist<Ts...>;
 
-template <typename TypeList, typename... Ts>
+template<typename TypeList, typename... Ts>
 using FinalizeList = mpl::Concat<TypeList, Ts...>;
 
-template <typename TComponentList, typename TTagList, typename TArchetypeList, typename TSignatureList>
+template<typename TComponentList, typename TTagList, typename TArchetypeList, typename TSignatureList>
 struct Settings
 {
     using ComponentList = TComponentList;
@@ -38,28 +40,34 @@ struct Settings
     using SignatureList = TSignatureList;
     using TSettings = Settings<ComponentList, TagList, ArchetypeList, SignatureList>;
 
-    template <typename T>
+    template<typename T>
     static constexpr bool isComponent() noexcept
     {
         return mpl::Contains<T, ComponentList>::value;
     }
 
-    template <typename T>
+    template<typename T>
     static constexpr bool isTag() noexcept
     {
         return mpl::Contains<T, TagList>::value;
     }
 
-    template <typename T>
+    template<typename T>
     static constexpr bool isArchetype() noexcept
     {
         return mpl::Contains<T, ArchetypeList>::value;
     }
 
-    template <typename T>
+    template<typename T>
     static constexpr bool isSignature() noexcept
     {
         return mpl::Contains<T, SignatureList>::value;
+    }
+
+    template<typename TArchetype, typename TSignature>
+    static constexpr bool matchesSignature() noexcept
+    {
+        return mpl::IsSubset<TArchetype, TSignature>::value;
     }
 
     static constexpr size_t componentCount() noexcept { return mpl::Count<ComponentList>::value; }
@@ -70,40 +78,43 @@ struct Settings
 
     static constexpr size_t signatureCount() noexcept { return mpl::Count<SignatureList>::value; }
 
-    template <typename T>
+    template<typename T>
     static constexpr size_t componentId() noexcept
     {
         return mpl::IndexOf<T, ComponentList>::value;
     }
 
-    template <typename T>
+    template<typename T>
     static constexpr size_t tagId() noexcept
     {
         return mpl::IndexOf<T, TagList>::value;
     }
 
-    template <typename T>
+    template<typename T>
     static constexpr size_t archetypeId() noexcept
     {
         return mpl::IndexOf<T, ArchetypeList>::value;
     }
 
-    template <typename T>
+    template<typename T>
     static constexpr size_t signatureId() noexcept
     {
         return mpl::IndexOf<T, SignatureList>::value;
     }
 
-    template <typename TComponent>
+    template<typename TComponent>
     using IsComponentFilter = std::bool_constant<isComponent<TComponent>()>;
 
-    template <typename TTag>
+    template<typename TTag>
     using IsTagFilter = std::bool_constant<isTag<TTag>()>;
 
-    template <typename TSignature>
+    template<typename TSignature>
     using SignatureComponents = mpl::Filter<IsComponentFilter, TSignature>;
 
-    template <typename TSignature>
+    template<typename TSignature>
     using SignatureTags = mpl::Filter<IsTagFilter, TSignature>;
+
+    template<typename TSignature>
+    using MatchingArchetypes = mpl::Supersets<TSignature, ArchetypeList>;
 };
 } // namespace sxi::ecs
