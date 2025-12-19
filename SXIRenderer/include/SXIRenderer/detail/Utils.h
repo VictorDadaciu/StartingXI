@@ -7,17 +7,12 @@
 
 namespace sxi::renderer::detail
 {
+using namespace sxi::types;
 u32 findMemoryType(u32, VkMemoryPropertyFlags);
 
-VkFormat findSupportedFormat(const std::vector<VkFormat>&,
-                             VkImageTiling,
-                             VkFormatFeatureFlags);
+VkFormat findSupportedFormat(const std::vector<VkFormat>&, VkImageTiling, VkFormatFeatureFlags);
 
-void createBuffer(VkDeviceSize,
-                  VkBufferUsageFlags,
-                  VkMemoryPropertyFlags,
-                  VkBuffer&,
-                  VkDeviceMemory&);
+void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
 
 void createImage(u32,
                  u32,
@@ -32,8 +27,7 @@ void createImage(u32,
 
 VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags, u32);
 
-void
-    transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout, u32);
+void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout, u32);
 
 void copyBufferToImage(VkBuffer, VkImage, u32, u32);
 

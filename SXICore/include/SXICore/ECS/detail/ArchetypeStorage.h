@@ -3,6 +3,7 @@
 #include "../../MPL/Filter.h"
 #include "../../MPL/IsSubset.h"
 #include "../../MPL/TypeListOperations.h"
+#include "../../Types.h"
 #include "../Entity.h"
 
 #include <assert.h>
@@ -11,12 +12,14 @@
 
 namespace sxi::ecs::detail
 {
+using namespace types;
+
 template<typename TSettings, typename TArchetype>
 class ArchetypeStorage final
 {
-    size_t size{};
-    size_t newSize{};
-    size_t capacity{};
+    u32 size{};
+    u32 newSize{};
+    u32 capacity{};
 
     using ArchetypeComponents = mpl::Filter<TSettings::template IsComponentFilter, TArchetype>;
 
@@ -157,7 +160,7 @@ public:
 
         Entity<TArchetype>& e = entities[freeIndex];
         assert(!e.alive);
-        e.handleDataIndex = std::numeric_limits<size_t>::max();
+        e.handleDataIndex = std::numeric_limits<u32>::max();
         e.alive = true;
 
         return freeIndex;
@@ -219,14 +222,14 @@ public:
     }
 
     template<typename Func>
-    void forEntities(Func&& func, size_t start, size_t end)
+    void forEntities(Func&& func, u32 start, u32 end)
     {
         for (EntityIndex<TArchetype> i{start}; i < std::min(end, size); ++i)
             func(i);
     }
 
     template<typename TSignature, typename Func>
-    void forComponents(Func&& func, size_t start, size_t end)
+    void forComponents(Func&& func, u32 start, u32 end)
     {
         if constexpr (mpl::IsSubset<TArchetype, TSignature>::value)
         {

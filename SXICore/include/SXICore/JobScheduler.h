@@ -2,30 +2,51 @@
 
 #include "MPL/Macros.h"
 #include "Types.h"
-#include "detail/ThreadPool.h"
+#include "detail/Task.h"
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <mutex>
+#include <thread_pool/thread_pool.h>
 #include <vector>
 
 namespace sxi
 {
-SXI_MPL_STRONG_TYPEDEF(size_t, ScheduleId)
+SXI_MPL_STRONG_TYPEDEF(uint16_t, ScheduleId)
+
+namespace detail
+{
+    struct Job;
+}
 
 struct WorkSize final
 {
-    size_t chunkSize = SXI_TASK_EVERYTHING;
-    size_t numChunks = 1;
+    WorkSize() : m_chunkSize(SXI_TASK_EVERYTHING), m_numChunks(1) {}
+
+    WorkSize(u16 chunkSize, u16 numChunks) : m_chunkSize(chunkSize), m_numChunks(numChunks)
+    {
+        assert(m_chunkSize > 0);
+        assert(m_numChunks > 0);
+    }
+
+private:
+    u16 m_chunkSize;
+    u16 m_numChunks;
+
+    friend class sxi::detail::Job;
 };
 
 using WorkSizeCalculator = std::function<WorkSize()>;
 
+class JobScheduler;
+
 namespace detail
 {
-    SXI_MPL_STRONG_TYPEDEF(int32_t, JobIndex)
+    using namespace sxi::types;
+    SXI_MPL_STRONG_TYPEDEF(int16_t, JobIndex)
 
-    class Checkpoint final
+    struct Checkpoint final
     {
     public:
         Checkpoint(ScheduleId id) : m_id(id), m_jobIndex(JobIndex{-1}), m_enabled(false) {}
@@ -40,10 +61,6 @@ namespace detail
 
         void incrementParentCounter() { ++m_parentCounter; };
 
-        const std::vector<ScheduleId>& children() const noexcept { return m_children; }
-
-        void addChild(ScheduleId id) { m_children.push_back(id); }
-
         void setJob(JobIndex jobIndex) noexcept
         {
             m_jobIndex = jobIndex;
@@ -52,40 +69,42 @@ namespace detail
 
         bool jobEnabled() const noexcept { return m_enabled && m_jobIndex > -1; }
 
-        void setJobEnabled(bool enabled) noexcept { m_enabled = enabled; }
-
-        JobIndex jobIndex() const noexcept { return m_jobIndex; }
-
-    private:
         ScheduleId m_id;
         JobIndex m_jobIndex;
         bool m_enabled;
         std::vector<ScheduleId> m_children{};
+
+    private:
         std::atomic_uint8_t m_parentCounter{};
     };
 
-    class Job final
+    struct Job final
     {
     public:
-        Job(const Work& work, const WorkSizeCalculator& workSizeCalculator, const std::function<void()>& jobFinished) :
-            m_work(work), m_workSizeCalculator(workSizeCalculator), m_jobFinished(jobFinished)
+        Job(JobScheduler& scheduler, ScheduleId scheduleId, Work&& work, WorkSizeCalculator&& workSizeCalculator) :
+            m_scheduleId(scheduleId), m_work(work), m_workSizeCalculator(workSizeCalculator)
         {
+            assert(s_scheduler != nullptr);
         }
 
         Job(const Job& other) :
-            m_work(other.m_work), m_workSizeCalculator(other.m_workSizeCalculator), m_jobFinished(other.m_jobFinished),
+            m_scheduleId(other.m_scheduleId), m_work(other.m_work), m_workSizeCalculator(other.m_workSizeCalculator),
             m_tasksCounter(other.m_tasksCounter.load())
         {
+            assert(s_scheduler != nullptr);
         }
 
-        void createAndRunTasks(ScheduleId, detail::ThreadPool&);
+        void createAndRunTasks();
 
         void taskFinished();
 
-    private:
+        ScheduleId m_scheduleId;
         Work m_work;
         WorkSizeCalculator m_workSizeCalculator;
-        std::function<void()> m_jobFinished;
+        inline static JobScheduler* s_scheduler{};
+        inline static dp::thread_pool<>* s_threadPool{};
+
+    private:
         std::atomic_uint8_t m_tasksCounter{};
     };
 } // namespace detail
@@ -96,13 +115,13 @@ class JobScheduler final
 {
 public:
     // from main thread at initialization
-    JobScheduler(size_t = std::thread::hardware_concurrency());
+    JobScheduler(u8 = std::thread::hardware_concurrency());
 
     // from main thread at initialization
     ScheduleId schedule(
-        const Work&,
+        Work&&,
         std::vector<ScheduleId>&&,
-        const WorkSizeCalculator& =
+        WorkSizeCalculator&& =
             []()
         {
             return WorkSize();
@@ -123,11 +142,13 @@ public:
 private:
     void jobFinished(ScheduleId);
 
-    detail::ThreadPool m_threadPool{};
+    dp::thread_pool<> m_threadPool;
     std::vector<detail::Checkpoint> m_checkpoints{};
     std::vector<detail::Job> m_jobs{};
-    std::atomic_uint32_t m_jobsLeft{};
+    std::atomic_uint16_t m_jobsLeft{};
     std::condition_variable m_cv{};
     std::mutex m_mutex;
+
+    friend struct detail::Job;
 };
 } // namespace sxi

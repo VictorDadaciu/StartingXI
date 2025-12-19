@@ -5,7 +5,7 @@ project(SXICore VERSION 1.0
                 LANGUAGES C CXX)
 
 add_library(${PROJECT_NAME} STATIC
-    src/detail/ThreadPool.cpp
+    src/logger/Logger.cpp
     src/JobScheduler.cpp
     src/File.cpp
     src/Timing.cpp
@@ -27,8 +27,7 @@ add_library(${PROJECT_NAME} STATIC
     include/${PROJECT_NAME}/ECS/Entity.h
     include/${PROJECT_NAME}/ECS/Manager.h
     include/${PROJECT_NAME}/ECS/detail/ArchetypeStorage.h
-    include/${PROJECT_NAME}/detail/ThreadPool.h
-    include/${PROJECT_NAME}/detail/Task.h
+    include/${PROJECT_NAME}/logger/Logger.h
     include/${PROJECT_NAME}/ECSConfig.h
     include/${PROJECT_NAME}/JobScheduler.h
     include/${PROJECT_NAME}/Exception.h
@@ -36,4 +35,7 @@ add_library(${PROJECT_NAME} STATIC
     include/${PROJECT_NAME}/Timing.h
     include/${PROJECT_NAME}/Types.h)
 
-target_include_directories(${PROJECT_NAME} PRIVATE include/${PROJECT_NAME})
+    target_link_libraries(${PROJECT_NAME} dp::thread-pool)
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    thread-pool
+    include/${PROJECT_NAME})

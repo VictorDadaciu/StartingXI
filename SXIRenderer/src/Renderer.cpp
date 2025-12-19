@@ -200,7 +200,7 @@ void init(u32 width, u32 height, bool releaseValidationLayers)
     detail::vertexBuffer = new detail::VertexBuffer();
     detail::indexBuffer = new detail::IndexBuffer();
     detail::uniformBuffers = new detail::UniformBuffer[MAX_FRAMES_IN_FLIGHT];
-    detail::scene = new detail::Scene(100);
+    detail::scene = new detail::Scene(5000);
 
     initialized = true;
 }

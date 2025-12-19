@@ -17,6 +17,8 @@
 
 namespace sxi::renderer::detail
 {
+using namespace sxi::types;
+
 struct alignas(64) FrameUBO
 {
     alignas(16) glm::mat4 view;
@@ -42,7 +44,7 @@ public:
     std::vector<VkDescriptorSet> objectDescriptorSets{};
 
     SceneData() = default;
-    SceneData(u8, u8);
+    SceneData(size_t, u8);
 
 private:
     void createFrameDescriptorSet();
@@ -56,24 +58,24 @@ private:
 class Scene
 {
 public:
-    Scene(u8);
+    Scene(size_t);
     ~Scene() = default;
 
     template<typename TSettings>
-    void run(ecs::Manager<TSettings>& mgr, const Time& time)
+    void run(ecs::Manager<TSettings>& mgr, const Time& time, size_t start, size_t end)
     {
         u8 currentFrame = context->currentFrame();
         mgr.template forEntitiesMatching<ecs::SXI_LightSignature>(
             [this, &time, &currentFrame](auto&, auto& posComponent)
             {
                 static TimePoint start = time.time;
-                float timePassed = -Time::elapsed(time.time, start);
+                float timePassed = -Time::elapsed(start, time.time);
 
                 posComponent.pos = glm::vec3(100.f * std::sinf(timePassed), 30, 100.f * std::cosf(timePassed));
 
                 char* offset = (char*)detail::uniformBuffers[currentFrame].mapped;
 
-                this->frameUBO.view = glm::lookAt(glm::vec3(0.f, 50.f, -75.f), glm::vec3(0.f, 20.f, 0.f), SXI_VEC3_UP);
+                this->frameUBO.view = glm::lookAt(glm::vec3(-4.5f, 3.5f, -4.5f), glm::vec3(0.f, 1.f, 0.f), SXI_VEC3_UP);
                 this->frameUBO.proj = glm::perspective(glm::radians(60.0f),
                                                        detail::window->swapchain->extent.width /
                                                            (float)detail::window->swapchain->extent.height,
@@ -87,8 +89,8 @@ public:
                 offset += sizeof(FrameUBO);
                 memcpy(offset, &this->frameLight, sizeof(FrameLight));
             },
-            0,
-            100);
+            start,
+            end);
 
         char* offset = (char*)detail::uniformBuffers[currentFrame].mapped + sizeof(FrameUBO) + sizeof(FrameLight);
         mgr.template forEntitiesMatching<ecs::SXI_RenderObjectSignature>(
@@ -98,8 +100,8 @@ public:
                 glm::mat4 rotation = glm::eulerAngleYXZ(rotComponent.rot.y, rotComponent.rot.x, rotComponent.rot.z);
                 this->objectUBOs[entityIndex].model = translation * rotation;
             },
-            0,
-            100);
+            start,
+            end);
         memcpy(offset, objectUBOs.data(), objectUBOs.size() * sizeof(ObjectUBO));
     }
 

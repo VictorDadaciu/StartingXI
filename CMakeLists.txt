@@ -46,6 +46,22 @@ FetchContent_MakeAvailable(
     stb
     tinyobjloader)
 
+set(TP_BUILD_TESTS OFF)
+set(TP_BUILD_BENCHMARKS OFF)
+set(TP_BUILD_EXAMPLES OFF)
+# dp::threadpool
+FetchContent_Declare(
+    dpthreadpool
+    GIT_REPOSITORY https://github.com/DeveloperPaul123/thread-pool
+    GIT_TAG        0.7.0)
+
+FetchContent_MakeAvailable(
+    SDL3
+    glm
+    stb
+    tinyobjloader
+    dpthreadpool)
+
 add_subdirectory(SXICore)
 add_subdirectory(SXIMath)
 add_subdirectory(SXIPathfinding)

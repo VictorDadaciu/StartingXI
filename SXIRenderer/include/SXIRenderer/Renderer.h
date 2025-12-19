@@ -18,6 +18,7 @@
 
 namespace sxi::renderer
 {
+using namespace sxi::types;
 void init(u32, u32, bool = false);
 
 void addGraphicsPipeline(const std::vector<char>&, const std::vector<char>&);
@@ -28,9 +29,15 @@ ecs::ModelIndex addModel(const std::string&);
 
 namespace detail
 {
+    using namespace sxi::types;
+
     template<typename TSettings>
-    void
-    recordCommandBuffer(ecs::Manager<TSettings> mgr, VkCommandBuffer commandBuffer, u32 imageIndex, u32 currentFrame)
+    void recordCommandBuffer(ecs::Manager<TSettings> mgr,
+                             VkCommandBuffer commandBuffer,
+                             u32 imageIndex,
+                             u32 currentFrame,
+                             size_t start,
+                             size_t end)
     {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -110,8 +117,8 @@ namespace detail
 
                 vkCmdDrawIndexed(commandBuffer, SXI_TO_U32(model->indices.size()), 1, 0, 0, 0);
             },
-            0,
-            100);
+            start,
+            end);
 
         vkCmdEndRenderPass(commandBuffer);
 
@@ -121,9 +128,9 @@ namespace detail
 } // namespace detail
 
 template<typename TSettings>
-void render(ecs::Manager<TSettings>& mgr, const Time& time)
+void render(ecs::Manager<TSettings>& mgr, const Time& time, size_t start, size_t end)
 {
-    detail::scene->run(mgr, time);
+    detail::scene->run(mgr, time, start, end);
 
     const detail::FrameContext* frameContext = detail::context->currentFrameContext();
     vkWaitForFences(detail::context->logicalDevice, 1, &frameContext->inFlightFence, VK_TRUE, UINT64_MAX);
@@ -139,7 +146,8 @@ void render(ecs::Manager<TSettings>& mgr, const Time& time)
     vkResetFences(detail::context->logicalDevice, 1, &frameContext->inFlightFence);
 
     vkResetCommandBuffer(frameContext->commandBuffer, 0);
-    detail::recordCommandBuffer(mgr, frameContext->commandBuffer, imageIndex, detail::context->currentFrame());
+    detail::recordCommandBuffer(
+        mgr, frameContext->commandBuffer, imageIndex, detail::context->currentFrame(), start, end);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

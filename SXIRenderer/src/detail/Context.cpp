@@ -13,11 +13,9 @@ namespace sxi::renderer::detail
 {
 Context* context{};
 
-static const std::vector<const char*> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+static const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-FrameContext::FrameContext(const VkDevice& logicalDevice,
-                           u8 graphicsQueueFamilyIndex)
+FrameContext::FrameContext(const VkDevice& logicalDevice, u8 graphicsQueueFamilyIndex)
 {
     createCommandPool(logicalDevice, graphicsQueueFamilyIndex);
     createCommandBuffer(logicalDevice);
@@ -26,23 +24,20 @@ FrameContext::FrameContext(const VkDevice& logicalDevice,
 
 FrameContext::~FrameContext()
 {
-    vkDestroySemaphore(
-        context->logicalDevice, imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(context->logicalDevice, imageAvailableSemaphore, nullptr);
     vkDestroyFence(context->logicalDevice, inFlightFence, nullptr);
 
     vkDestroyCommandPool(context->logicalDevice, commandPool, nullptr);
 }
 
-void FrameContext::createCommandPool(const VkDevice& logicalDevice,
-                                     u8 graphicsQueueFamilyIndex)
+void FrameContext::createCommandPool(const VkDevice& logicalDevice, u8 graphicsQueueFamilyIndex)
 {
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = graphicsQueueFamilyIndex;
 
-    if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) !=
-        VK_SUCCESS)
+    if (vkCreateCommandPool(logicalDevice, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create command pool");
 }
 
@@ -54,8 +49,7 @@ void FrameContext::createCommandBuffer(const VkDevice& logicalDevice)
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
 
-    if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer) !=
-        VK_SUCCESS)
+    if (vkAllocateCommandBuffers(logicalDevice, &allocInfo, &commandBuffer) != VK_SUCCESS)
         throw ResourceCreationException("Failed to allocate command buffers");
 }
 
@@ -64,50 +58,39 @@ void FrameContext::createSyncObjects(const VkDevice& logicalDevice)
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    if (vkCreateSemaphore(
-            logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore) !=
-        VK_SUCCESS)
+    if (vkCreateSemaphore(logicalDevice, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create semaphore");
 
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if (vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence) !=
-        VK_SUCCESS)
+    if (vkCreateFence(logicalDevice, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create fence");
 }
 
-PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice,
-                               const VkSurfaceKHR& surface) :
+PhysicalDevice::PhysicalDevice(const VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& surface) :
     device(physicalDevice)
 {
     vkGetPhysicalDeviceProperties(device, &properties);
     vkGetPhysicalDeviceFeatures(device, &features);
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        device, surface, &swapchainSupport.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &swapchainSupport.capabilities);
 
     u32 formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(
-        device, surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
     if (formatCount != 0)
     {
         swapchainSupport.formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(
-            device, surface, &formatCount, swapchainSupport.formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, swapchainSupport.formats.data());
     }
 
     u32 presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device, surface, &presentModeCount, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
     if (presentModeCount != 0)
     {
         swapchainSupport.presentModes.resize(presentModeCount);
         vkGetPhysicalDeviceSurfacePresentModesKHR(
-            device,
-            surface,
-            &presentModeCount,
-            swapchainSupport.presentModes.data());
+            device, surface, &presentModeCount, swapchainSupport.presentModes.data());
     }
 
     vkGetPhysicalDeviceMemoryProperties(device, &memProperties);
@@ -123,8 +106,7 @@ bool PhysicalDevice::suitable() const
     if (!features.samplerAnisotropy)
         return false;
 
-    if (swapchainSupport.formats.empty() ||
-        swapchainSupport.presentModes.empty())
+    if (swapchainSupport.formats.empty() || swapchainSupport.presentModes.empty())
         return false;
     return true;
 }
@@ -132,14 +114,11 @@ bool PhysicalDevice::suitable() const
 bool PhysicalDevice::supportsExtensions() const
 {
     u32 extensionCount;
-    vkEnumerateDeviceExtensionProperties(
-        device, nullptr, &extensionCount, nullptr);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
     std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(
-        device, nullptr, &extensionCount, availableExtensions.data());
-    std::set<std::string> requiredExtensions(deviceExtensions.begin(),
-                                             deviceExtensions.end());
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
     for (const auto& extension : availableExtensions)
         requiredExtensions.erase(extension.extensionName);
@@ -163,9 +142,8 @@ VkSampleCountFlagBits PhysicalDevice::getMaxUsableSampleCount() const
     VkPhysicalDeviceProperties physicalDeviceProperties;
     vkGetPhysicalDeviceProperties(device, &physicalDeviceProperties);
 
-    VkSampleCountFlags counts =
-        physicalDeviceProperties.limits.framebufferColorSampleCounts &
-        physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
+                                physicalDeviceProperties.limits.framebufferDepthSampleCounts;
     if (counts & VK_SAMPLE_COUNT_64_BIT)
     {
         return VK_SAMPLE_COUNT_64_BIT;
@@ -194,9 +172,8 @@ VkSampleCountFlagBits PhysicalDevice::getMaxUsableSampleCount() const
     return VK_SAMPLE_COUNT_1_BIT;
 }
 
-Context::Context(const VkInstance& instance,
-                 const VkSurfaceKHR& surface,
-                 const std::vector<const char*>& layers) : instance(instance)
+Context::Context(const VkInstance& instance, const VkSurfaceKHR& surface, const std::vector<const char*>& layers) :
+    instance(instance)
 {
     enumeratePhysicalDevices(surface);
     chooseBestPhysicalDevice();
@@ -204,8 +181,7 @@ Context::Context(const VkInstance& instance,
     createDescriptorPool();
     createDescriptorSetLayouts();
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
-        frameContexts[i] =
-            new FrameContext(logicalDevice, queueFamiliesUsed[GRAPHICS].first);
+        frameContexts[i] = new FrameContext(logicalDevice, queueFamiliesUsed[GRAPHICS].first);
 }
 
 Context::~Context()
@@ -232,8 +208,7 @@ void Context::enumeratePhysicalDevices(const VkSurfaceKHR& surface)
         throw InitializationException("No physical device found.");
 
     std::vector<VkPhysicalDevice> candidatePhysicalDevices(deviceCount);
-    vkEnumeratePhysicalDevices(
-        instance, &deviceCount, candidatePhysicalDevices.data());
+    vkEnumeratePhysicalDevices(instance, &deviceCount, candidatePhysicalDevices.data());
     for (VkPhysicalDevice physicalDevice : candidatePhysicalDevices)
     {
         PhysicalDevice candidate(physicalDevice, surface);
@@ -260,15 +235,13 @@ void Context::chooseBestPhysicalDevice()
     }
 }
 
-void Context::createLogicalDevice(const VkSurfaceKHR& surface,
-                                  const std::vector<const char*>& layers)
+void Context::createLogicalDevice(const VkSurfaceKHR& surface, const std::vector<const char*>& layers)
 {
     queueFamiliesUsed = chooseQueueFamilyIndices(surface);
 
     std::unordered_map<u8, u8> queueFamilyIndicesCondensed{};
     for (const std::pair<u8, u8>& queueRequest : queueFamiliesUsed)
-        if (queueFamilyIndicesCondensed.find(queueRequest.first) !=
-            queueFamilyIndicesCondensed.end())
+        if (queueFamilyIndicesCondensed.find(queueRequest.first) != queueFamilyIndicesCondensed.end())
             queueFamilyIndicesCondensed[queueRequest.first]++;
         else
             queueFamilyIndicesCondensed[queueRequest.first] = 1;
@@ -307,20 +280,12 @@ void Context::createLogicalDevice(const VkSurfaceKHR& surface,
         createInfo.enabledLayerCount = 0;
     }
 
-    if (vkCreateDevice(currentPhysicalDevice().device,
-                       &createInfo,
-                       nullptr,
-                       &logicalDevice) != VK_SUCCESS)
+    if (vkCreateDevice(currentPhysicalDevice().device, &createInfo, nullptr, &logicalDevice) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create logical device.");
 
-    vkGetDeviceQueue(logicalDevice,
-                     queueFamiliesUsed[GRAPHICS].first,
-                     queueFamiliesUsed[GRAPHICS].second,
-                     &graphicsQueue);
-    vkGetDeviceQueue(logicalDevice,
-                     queueFamiliesUsed[PRESENT].first,
-                     queueFamiliesUsed[PRESENT].second,
-                     &presentQueue);
+    vkGetDeviceQueue(
+        logicalDevice, queueFamiliesUsed[GRAPHICS].first, queueFamiliesUsed[GRAPHICS].second, &graphicsQueue);
+    vkGetDeviceQueue(logicalDevice, queueFamiliesUsed[PRESENT].first, queueFamiliesUsed[PRESENT].second, &presentQueue);
 }
 
 std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT>
@@ -328,12 +293,9 @@ Context::chooseQueueFamilyIndices(const VkSurfaceKHR& surface) const
 {
     std::vector<VkQueueFamilyProperties> queueFamilies{};
     u32 queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        currentPhysicalDevice().device, &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(currentPhysicalDevice().device, &queueFamilyCount, nullptr);
     queueFamilies.resize(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(currentPhysicalDevice().device,
-                                             &queueFamilyCount,
-                                             queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(currentPhysicalDevice().device, &queueFamilyCount, queueFamilies.data());
 
     std::array<std::pair<u8, u8>, QueueFamilyIndex::COUNT> queueFamilyIndices{};
     for (size_t i = 0; i < queueFamilies.size(); ++i)
@@ -349,15 +311,12 @@ Context::chooseQueueFamilyIndices(const VkSurfaceKHR& surface) const
     for (size_t i = 0; i < queueFamilies.size(); ++i)
     {
         VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(
-            currentPhysicalDevice().device, i, surface, &presentSupport);
+        vkGetPhysicalDeviceSurfaceSupportKHR(currentPhysicalDevice().device, i, surface, &presentSupport);
         if (presentSupport)
         {
-            if (queueFamilyIndices[GRAPHICS].first !=
-                queueFamilyIndices[PRESENT].first)
+            if (queueFamilyIndices[GRAPHICS].first != queueFamilyIndices[PRESENT].first)
             {
-                queueFamilyIndices[PRESENT] =
-                    std::pair<u8, u8>(SXI_TO_U8(i), 0);
+                queueFamilyIndices[PRESENT] = std::pair<u8, u8>(SXI_TO_U8(i), 0);
                 presentFound = true;
                 break;
             }
@@ -369,17 +328,13 @@ Context::chooseQueueFamilyIndices(const VkSurfaceKHR& surface) const
         for (size_t i = 0; i < queueFamilies.size(); ++i)
         {
             VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(
-                currentPhysicalDevice().device, i, surface, &presentSupport);
+            vkGetPhysicalDeviceSurfaceSupportKHR(currentPhysicalDevice().device, i, surface, &presentSupport);
             if (presentSupport)
             {
-                queueFamilyIndices[PRESENT] =
-                    std::pair<u8, u8>(SXI_TO_U8(i), 0);
-                if (queueFamilyIndices[GRAPHICS].first ==
-                    queueFamilyIndices[PRESENT].first)
+                queueFamilyIndices[PRESENT] = std::pair<u8, u8>(SXI_TO_U8(i), 0);
+                if (queueFamilyIndices[GRAPHICS].first == queueFamilyIndices[PRESENT].first)
                 {
-                    queueFamilyIndices[PRESENT].second =
-                        queueFamilies[i].queueCount > 1;
+                    queueFamilyIndices[PRESENT].second = queueFamilies[i].queueCount > 1;
                     break;
                 }
             }
@@ -392,18 +347,17 @@ void Context::createDescriptorPool()
 {
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = 1000;
+    poolSizes[0].descriptorCount = 10010;
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = 1000;
+    poolSizes[1].descriptorCount = 1;
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = SXI_TO_U32(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    poolInfo.maxSets = 1000;
+    poolInfo.maxSets = 10010;
 
-    if (vkCreateDescriptorPool(
-            logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+    if (vkCreateDescriptorPool(logicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create descriptor pool");
 }
 
@@ -414,8 +368,7 @@ void Context::createDescriptorSetLayouts()
         VkDescriptorSetLayoutBinding matricesLayoutBinding{};
         matricesLayoutBinding.binding = 0;
         matricesLayoutBinding.descriptorCount = 1;
-        matricesLayoutBinding.descriptorType =
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        matricesLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         matricesLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
         VkDescriptorSetLayoutBinding lightLayoutBinding{};
@@ -424,29 +377,22 @@ void Context::createDescriptorSetLayouts()
         lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
-            matricesLayoutBinding, lightLayoutBinding};
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {matricesLayoutBinding, lightLayoutBinding};
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = SXI_TO_U32(bindings.size());
         layoutInfo.pBindings = bindings.data();
 
         if (vkCreateDescriptorSetLayout(
-                logicalDevice,
-                &layoutInfo,
-                nullptr,
-                &descriptorSetLayouts[DescriptorSetType::PerFrame]) !=
-            VK_SUCCESS)
-            throw ResourceCreationException(
-                "Failed to create descriptor set layout");
+                logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerFrame]) != VK_SUCCESS)
+            throw ResourceCreationException("Failed to create descriptor set layout");
     }
     // per model
     {
         VkDescriptorSetLayoutBinding albedoLayoutBinding{};
         albedoLayoutBinding.binding = 0;
         albedoLayoutBinding.descriptorCount = 1;
-        albedoLayoutBinding.descriptorType =
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -455,21 +401,15 @@ void Context::createDescriptorSetLayouts()
         layoutInfo.pBindings = &albedoLayoutBinding;
 
         if (vkCreateDescriptorSetLayout(
-                logicalDevice,
-                &layoutInfo,
-                nullptr,
-                &descriptorSetLayouts[DescriptorSetType::PerModel]) !=
-            VK_SUCCESS)
-            throw ResourceCreationException(
-                "Failed to create descriptor set layout");
+                logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerModel]) != VK_SUCCESS)
+            throw ResourceCreationException("Failed to create descriptor set layout");
     }
     // per object
     {
         VkDescriptorSetLayoutBinding matricesLayoutBinding{};
         matricesLayoutBinding.binding = 0;
         matricesLayoutBinding.descriptorCount = 1;
-        matricesLayoutBinding.descriptorType =
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        matricesLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         matricesLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -478,13 +418,8 @@ void Context::createDescriptorSetLayouts()
         layoutInfo.pBindings = &matricesLayoutBinding;
 
         if (vkCreateDescriptorSetLayout(
-                logicalDevice,
-                &layoutInfo,
-                nullptr,
-                &descriptorSetLayouts[DescriptorSetType::PerObject]) !=
-            VK_SUCCESS)
-            throw ResourceCreationException(
-                "Failed to create descriptor set layout");
+                logicalDevice, &layoutInfo, nullptr, &descriptorSetLayouts[DescriptorSetType::PerObject]) != VK_SUCCESS)
+            throw ResourceCreationException("Failed to create descriptor set layout");
     }
 }
 } // namespace sxi::renderer::detail

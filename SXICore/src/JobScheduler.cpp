@@ -1,37 +1,37 @@
 #include "JobScheduler.h"
 
 #include "Types.h"
+#include "logger/Logger.h"
 
 #include <cassert>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace sxi
 {
+using namespace types;
+
 namespace detail
 {
-    void Job::createAndRunTasks(ScheduleId id, detail::ThreadPool& threadPool)
+    void Job::createAndRunTasks()
     {
         WorkSize workSize = m_workSizeCalculator();
-        assert(workSize.chunkSize > 0);
-        assert(workSize.numChunks > 0);
-
-        m_tasksCounter = workSize.numChunks;
-
-        size_t start = 0;
-        size_t end = workSize.chunkSize;
-        for (size_t chunk = 0; chunk < workSize.numChunks; ++chunk)
+        m_tasksCounter = workSize.m_numChunks;
+        u32 start = 0;
+        u32 end = workSize.m_chunkSize;
+        for (u16 chunk = 0; chunk < workSize.m_numChunks; ++chunk)
         {
-            threadPool.emplace(id,
-                               m_work,
-                               start,
-                               end,
-                               [this]()
-                               {
-                                   this->taskFinished();
-                               });
+            s_threadPool->enqueue_detach(
+                [this](u32 start, u32 end)
+                {
+                    m_work(start, end);
+                    taskFinished();
+                },
+                start,
+                end);
             start = end;
-            end += workSize.chunkSize;
+            end += workSize.m_chunkSize;
         }
     }
 
@@ -39,30 +39,27 @@ namespace detail
     {
         if (--m_tasksCounter == 0)
         {
-            m_jobFinished();
+            s_scheduler->jobFinished(m_scheduleId);
         }
     }
 } // namespace detail
 
-JobScheduler::JobScheduler(size_t numThreads) : m_threadPool(numThreads)
+JobScheduler::JobScheduler(u8 numThreads) : m_threadPool(numThreads)
 {
     assert(numThreads > 0);
+    sxi::logger::trace("ThreadPool initialized with " + std::to_string(numThreads) + " threads");
 
     m_checkpoints.emplace_back(SXI_CHECKPOINT_BEGIN);
+    detail::Job::s_scheduler = this;
+    detail::Job::s_threadPool = &m_threadPool;
 }
 
-ScheduleId JobScheduler::schedule(const Work& work,
-                                  std::vector<ScheduleId>&& prereqs,
-                                  const WorkSizeCalculator& workSizeCalculator)
+ScheduleId
+JobScheduler::schedule(Work&& work, std::vector<ScheduleId>&& prereqs, WorkSizeCalculator&& workSizeCalculator)
 {
     ScheduleId id = setCheckpoint(std::move(prereqs));
-    m_checkpoints[id].setJob(detail::JobIndex{SXI_TO_I32(m_jobs.size())});
-    m_jobs.emplace_back(work,
-                        workSizeCalculator,
-                        [this, id]()
-                        {
-                            this->jobFinished(id);
-                        });
+    m_checkpoints[id].setJob(detail::JobIndex{SXI_TO_I16(m_jobs.size())});
+    m_jobs.emplace_back(*this, id, std::move(work), std::move(workSizeCalculator));
 
     return id;
 }
@@ -77,7 +74,7 @@ ScheduleId JobScheduler::setCheckpoint(std::vector<ScheduleId>&& prereqs)
     {
         assert(parentId < m_checkpoints.size());
 
-        m_checkpoints[parentId].addChild(id);
+        m_checkpoints[parentId].m_children.push_back(id);
     }
 
     return id;
@@ -87,7 +84,7 @@ void JobScheduler::refresh() noexcept
 {
     for (detail::Checkpoint& checkpoint : m_checkpoints)
     {
-        for (ScheduleId id : checkpoint.children())
+        for (ScheduleId id : checkpoint.m_children)
         {
             m_checkpoints[id].incrementParentCounter();
         }
@@ -97,7 +94,7 @@ void JobScheduler::refresh() noexcept
 void JobScheduler::jobFinished(ScheduleId id)
 {
     detail::Checkpoint& checkpoint = m_checkpoints[id];
-    for (ScheduleId childId : checkpoint.children())
+    for (ScheduleId childId : checkpoint.m_children)
     {
         detail::Checkpoint& child = m_checkpoints[childId];
         if (child.prerequisiteJobFinished() > 0)
@@ -108,7 +105,7 @@ void JobScheduler::jobFinished(ScheduleId id)
         // needs to trickle down
         if (child.jobEnabled())
         {
-            m_jobs[child.jobIndex()].createAndRunTasks(childId, m_threadPool);
+            m_jobs[child.m_jobIndex].createAndRunTasks();
         }
         else
         {
@@ -134,7 +131,7 @@ void JobScheduler::setEnabled(ScheduleId id, bool enabled) noexcept
 {
     assert(id < m_checkpoints.size());
 
-    m_checkpoints[id].setJobEnabled(enabled);
+    m_checkpoints[id].m_enabled = enabled;
 }
 
 bool JobScheduler::isEnabled(ScheduleId id) const noexcept

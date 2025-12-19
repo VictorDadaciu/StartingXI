@@ -7,7 +7,7 @@ namespace sxi::renderer::detail
 {
 Scene* scene{};
 
-SceneData::SceneData(u8 maxObjects, u8 frame) : frame(frame)
+SceneData::SceneData(size_t maxObjects, u8 frame) : frame(frame)
 {
     objectDescriptorSets.resize(maxObjects);
     createFrameDescriptorSet();
@@ -93,7 +93,7 @@ void SceneData::createObjectDescriptorSets()
     }
 }
 
-Scene::Scene(u8 maxObjects)
+Scene::Scene(size_t maxObjects)
 {
     objectUBOs.resize(maxObjects);
     for (size_t i = 0; i < sceneDatas.size(); ++i)

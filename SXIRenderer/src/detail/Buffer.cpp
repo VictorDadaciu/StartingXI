@@ -11,9 +11,9 @@ VertexBuffer* vertexBuffer{};
 IndexBuffer* indexBuffer{};
 UniformBuffer* uniformBuffers{};
 
-const VkDeviceSize MAX_VERTICES = 1000000;
-const VkDeviceSize MAX_INDICES = 1000000;
-const VkDeviceSize MAX_OBJECTS = 100;
+constexpr VkDeviceSize MAX_VERTICES = 1000000;
+constexpr VkDeviceSize MAX_INDICES = 1000000;
+constexpr VkDeviceSize MAX_OBJECTS = 5000;
 
 VertexBuffer::VertexBuffer() : size(sizeof(Vertex) * MAX_VERTICES), offset(0)
 {

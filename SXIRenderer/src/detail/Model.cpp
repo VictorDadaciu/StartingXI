@@ -7,6 +7,7 @@
 
 namespace sxi::renderer::detail
 {
+using namespace types;
 std::vector<Model*> models{};
 
 Model::Model(const std::string& path)

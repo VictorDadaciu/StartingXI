@@ -10,6 +10,8 @@
 
 namespace sxi::renderer::detail
 {
+using namespace sxi::types;
+
 struct Vertex
 {
     glm::vec3 pos;
@@ -70,7 +72,7 @@ extern std::vector<Model*> models;
 
 namespace std
 {
-template <>
+template<>
 struct hash<sxi::renderer::detail::Vertex>
 {
     size_t operator()(const sxi::renderer::detail::Vertex& vertex) const

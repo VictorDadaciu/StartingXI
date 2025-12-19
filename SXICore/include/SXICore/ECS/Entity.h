@@ -1,46 +1,47 @@
 #pragma once
 
 #include "../MPL/Macros.h"
-#include <cstddef>
+#include "../Types.h"
 
 namespace sxi::ecs
 {
-template <typename TArchetype>
-SXI_MPL_STRONG_TYPEDEF(size_t, EntityIndex);
+using namespace types;
+template<typename TArchetype>
+SXI_MPL_STRONG_TYPEDEF(u32, EntityIndex);
 
 namespace detail
 {
-    template <typename TSettings, typename TArchetype>
+    template<typename TSettings, typename TArchetype>
     class ArchetypeStorage;
 
-    template <typename TArchetype>
-    SXI_MPL_STRONG_TYPEDEF(size_t, EntityHandleDataIndex);
+    template<typename TArchetype>
+    SXI_MPL_STRONG_TYPEDEF(u32, EntityHandleDataIndex);
 
-    template <typename TArchetype>
+    template<typename TArchetype>
     struct Entity final
     {
         EntityHandleDataIndex<TArchetype> handleDataIndex;
         bool alive;
     };
 
-    template <typename TArchetype>
+    template<typename TArchetype>
     class EntityHandleData final
     {
         EntityIndex<TArchetype> index;
         int counter;
 
-        template <typename T, typename U>
+        template<typename T, typename U>
         friend class ArchetypeStorage;
     };
 } // namespace detail
 
-template <typename TArchetype>
+template<typename TArchetype>
 class EntityHandle final
 {
     detail::EntityHandleDataIndex<TArchetype> handleDataIndex;
     int counter;
 
-    template <typename T, typename U>
+    template<typename T, typename U>
     friend class detail::ArchetypeStorage;
 };
 } // namespace sxi::ecs

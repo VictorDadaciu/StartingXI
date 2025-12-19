@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../MPL/TypeListOperations.h"
+#include "../Types.h"
 #include "Entity.h"
 #include "detail/ArchetypeStorage.h"
 
@@ -8,6 +9,8 @@
 
 namespace sxi::ecs
 {
+using namespace types;
+
 template<typename TSettings>
 class Manager final
 {
@@ -124,24 +127,24 @@ public:
     }
 
     template<typename Func>
-    void forEntities(Func&& func)
+    void forEntities(Func&& func, u32 start, u32 end)
     {
         mpl::forTuple(
-            [&func](auto& as)
+            [&func, start, end](auto& as)
             {
-                as.forEntities(func);
+                as.forEntities(func, start, end);
             },
             archetypes);
     }
 
     template<typename TArchetype, typename Func>
-    void forEntities(Func&& func)
+    void forEntities(Func&& func, u32 start, u32 end)
     {
         archetypeStorage<TArchetype>().forEntities(func);
     }
 
     template<typename TSignature, typename Func>
-    void forEntitiesMatching(Func&& func, size_t start, size_t end)
+    void forEntitiesMatching(Func&& func, u32 start, u32 end)
     {
         static_assert(Settings::template isSignature<TSignature>(), "TSignature is not a signature");
 

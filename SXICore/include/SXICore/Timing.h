@@ -10,10 +10,17 @@ inline constexpr float SXI_DT_144FPS = 1.f / 144.f;
 
 struct Time
 {
-    Time();
-    Time(float);
+    Time() : time(Clock::now()) {}
 
-    static float elapsed(const TimePoint&, const TimePoint&);
+    Time(float initialDT) : time(Clock::now()), dt(initialDT) {}
+
+    template<class Duration = std::chrono::seconds>
+    static float elapsed(const TimePoint& before, const TimePoint& after)
+    {
+        static_assert(std::chrono::__is_duration_v<Duration>, "");
+
+        return std::chrono::duration<float, typename Duration::period>(after - before).count();
+    }
 
     void refresh();
 

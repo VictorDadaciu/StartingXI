@@ -8,6 +8,8 @@
 
 namespace sxi::renderer::detail
 {
+using namespace sxi::types;
+
 struct Texture
 {
     unsigned char* raw{};
