@@ -17,13 +17,13 @@ struct Swapchain
     VkExtent2D extent{};
     VkPresentModeKHR presentMode{};
     std::vector<VkSemaphore> renderFinishedSemaphores{};
+    std::vector<VkSemaphore> timelineSemaphores{};
 
     Swapchain(SDL_Window*, const VkSurfaceKHR&);
     ~Swapchain();
 
 private:
-    void populateProperties(SDL_Window*,
-                            const PhysicalDevice::SwapchainSupportDetails&);
+    void populateProperties(SDL_Window*, const PhysicalDevice::SwapchainSupportDetails&);
 };
 
 extern struct Window
@@ -37,10 +37,7 @@ extern struct Window
 
     void recreateSwapchain();
 
-    inline void sizeInPixels(int& width, int& height) const
-    {
-        SDL_GetWindowSizeInPixels(sdlWindow, &width, &height);
-    }
+    inline void sizeInPixels(int& width, int& height) const { SDL_GetWindowSizeInPixels(sdlWindow, &width, &height); }
 
 private:
 }* window;

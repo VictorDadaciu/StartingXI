@@ -76,7 +76,7 @@ namespace detail
     extern std::unique_ptr<Logger> logger;
 } // namespace detail
 
-inline void init(std::ostream& ostream)
+inline void init(std::ostream& ostream = std::cout)
 {
     assert(!detail::logger);
     detail::logger = std::make_unique<detail::Logger>(ostream);

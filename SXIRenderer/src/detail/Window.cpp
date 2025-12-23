@@ -1,20 +1,22 @@
 #include "detail/Window.h"
 
 #include "SXICore/Exception.h"
+#include "SXICore/logger/Logger.h"
 #include "detail/Context.h"
 #include "detail/Utils.h"
 
 #include <algorithm>
 #include <limits>
 #include <set>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace sxi::renderer::detail
 {
 Window* window{};
 
 Window::Window(SDL_Window* sdlWindow, const VkSurfaceKHR& surface) :
-    sdlWindow(sdlWindow), surface(surface),
-    swapchain(new Swapchain(sdlWindow, surface))
+    sdlWindow(sdlWindow), surface(surface), swapchain(new Swapchain(sdlWindow, surface))
 {
 }
 
@@ -34,14 +36,11 @@ void Window::recreateSwapchain()
 
 Swapchain::Swapchain(SDL_Window* sdlWindow, const VkSurfaceKHR& surface)
 {
-    const PhysicalDevice::SwapchainSupportDetails& supportDetails =
-        context->currentPhysicalDevice().swapchainSupport;
+    const PhysicalDevice::SwapchainSupportDetails& supportDetails = context->currentPhysicalDevice().swapchainSupport;
     populateProperties(sdlWindow, supportDetails);
 
     u32 imageCount = supportDetails.capabilities.minImageCount + 1;
-    if (supportDetails.capabilities.maxImageCount >
-        0 &&
-        imageCount > supportDetails.capabilities.maxImageCount)
+    if (supportDetails.capabilities.maxImageCount > 0 && imageCount > supportDetails.capabilities.maxImageCount)
         imageCount = supportDetails.capabilities.maxImageCount;
 
     VkSwapchainCreateInfoKHR createInfo{};
@@ -60,11 +59,9 @@ Swapchain::Swapchain(SDL_Window* sdlWindow, const VkSurfaceKHR& surface)
 
     if (queueFamiliesUsed.size() > 1)
     {
-        std::vector<u32> queueFamilyIndices(queueFamiliesUsed.begin(),
-                                            queueFamiliesUsed.end());
+        std::vector<u32> queueFamilyIndices(queueFamiliesUsed.begin(), queueFamiliesUsed.end());
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount =
-            SXI_TO_U32(queueFamilyIndices.size());
+        createInfo.queueFamilyIndexCount = SXI_TO_U32(queueFamilyIndices.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices.data();
     }
     else
@@ -79,31 +76,39 @@ Swapchain::Swapchain(SDL_Window* sdlWindow, const VkSurfaceKHR& surface)
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if (vkCreateSwapchainKHR(
-            context->logicalDevice, &createInfo, nullptr, &swapchain) !=
-        VK_SUCCESS)
+    if (vkCreateSwapchainKHR(context->logicalDevice, &createInfo, nullptr, &swapchain) != VK_SUCCESS)
         throw ResourceCreationException("Failed to create swap chain");
 
-    vkGetSwapchainImagesKHR(
-        context->logicalDevice, swapchain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, nullptr);
     images.resize(imageCount);
-    vkGetSwapchainImagesKHR(
-        context->logicalDevice, swapchain, &imageCount, images.data());
+    vkGetSwapchainImagesKHR(context->logicalDevice, swapchain, &imageCount, images.data());
 
     imageViews.resize(images.size());
     for (size_t i = 0; i < imageViews.size(); i++)
-        imageViews[i] = createImageView(
-            images[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+        imageViews[i] = createImageView(images[i], surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+
+    VkSemaphoreTypeCreateInfo timelineCreateInfo;
+    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    timelineCreateInfo.pNext = NULL;
+    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    timelineCreateInfo.initialValue = 0;
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreInfo.pNext = &timelineCreateInfo;
+
+    timelineSemaphores.resize(images.size());
+    for (size_t i = 0; i < timelineSemaphores.size(); i++)
+        if (vkCreateSemaphore(context->logicalDevice, &semaphoreInfo, nullptr, &timelineSemaphores[i]) != VK_SUCCESS)
+            throw ResourceCreationException("Failed to create semaphores");
+
+    VkSemaphoreCreateInfo semaphoreInfoBinary{};
+    semaphoreInfoBinary.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
     renderFinishedSemaphores.resize(images.size());
     for (size_t i = 0; i < renderFinishedSemaphores.size(); i++)
-        if (vkCreateSemaphore(context->logicalDevice,
-                              &semaphoreInfo,
-                              nullptr,
-                              &renderFinishedSemaphores[i]) != VK_SUCCESS)
+        if (vkCreateSemaphore(context->logicalDevice, &semaphoreInfoBinary, nullptr, &renderFinishedSemaphores[i]) !=
+            VK_SUCCESS)
             throw ResourceCreationException("Failed to create semaphores");
 }
 
@@ -113,6 +118,8 @@ Swapchain::~Swapchain()
 
     for (const VkSemaphore& semaphore : renderFinishedSemaphores)
         vkDestroySemaphore(context->logicalDevice, semaphore, nullptr);
+    for (const VkSemaphore& semaphore : timelineSemaphores)
+        vkDestroySemaphore(context->logicalDevice, semaphore, nullptr);
 
     for (const VkImageView& imageView : imageViews)
         vkDestroyImageView(context->logicalDevice, imageView, nullptr);
@@ -120,9 +127,7 @@ Swapchain::~Swapchain()
     vkDestroySwapchainKHR(context->logicalDevice, swapchain, nullptr);
 }
 
-void Swapchain::populateProperties(
-    SDL_Window* sdlWindow,
-    const PhysicalDevice::SwapchainSupportDetails& supportDetails)
+void Swapchain::populateProperties(SDL_Window* sdlWindow, const PhysicalDevice::SwapchainSupportDetails& supportDetails)
 {
     surfaceFormat = supportDetails.formats[0];
     presentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -138,31 +143,34 @@ void Swapchain::populateProperties(
         }
     }
 
-    for (const auto& availablePresentMode : supportDetails.presentModes)
+    if (std::find(supportDetails.presentModes.cbegin(),
+                  supportDetails.presentModes.cend(),
+                  VK_PRESENT_MODE_MAILBOX_KHR) != supportDetails.presentModes.cend())
     {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-        {
-            presentMode = availablePresentMode;
-            break;
-        }
+        presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+        sxi::logger::trace("Mailbox present mode selected");
+    }
+    else if (std::find(supportDetails.presentModes.cbegin(),
+                       supportDetails.presentModes.cend(),
+                       VK_PRESENT_MODE_FIFO_LATEST_READY_KHR) != supportDetails.presentModes.cend())
+    {
+        presentMode = VK_PRESENT_MODE_FIFO_LATEST_READY_KHR;
+        sxi::logger::trace("FIFO latest ready present mode selected");
     }
 
-    if (supportDetails.capabilities.currentExtent.width ==
-        std::numeric_limits<u32>::max())
+    if (supportDetails.capabilities.currentExtent.width == std::numeric_limits<u32>::max())
     {
         int width, height;
         SDL_GetWindowSizeInPixels(sdlWindow, &width, &height);
 
         extent = {SXI_TO_U32(width), SXI_TO_U32(height)};
 
-        extent.width =
-            std::clamp(extent.width,
-                       supportDetails.capabilities.minImageExtent.width,
-                       supportDetails.capabilities.maxImageExtent.width);
-        extent.height =
-            std::clamp(extent.height,
-                       supportDetails.capabilities.minImageExtent.height,
-                       supportDetails.capabilities.maxImageExtent.height);
+        extent.width = std::clamp(extent.width,
+                                  supportDetails.capabilities.minImageExtent.width,
+                                  supportDetails.capabilities.maxImageExtent.width);
+        extent.height = std::clamp(extent.height,
+                                   supportDetails.capabilities.minImageExtent.height,
+                                   supportDetails.capabilities.maxImageExtent.height);
     }
 }
 } // namespace sxi::renderer::detail

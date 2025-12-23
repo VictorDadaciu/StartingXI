@@ -2,18 +2,21 @@
 
 #include "SXICore/Exception.h"
 #include "SXICore/Types.h"
+#include "SXICore/logger/Logger.h"
 
 #include <array>
 #include <limits>
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <vulkan/vulkan_core.h>
 
 namespace sxi::renderer::detail
 {
 Context* context{};
 
-static const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+static const std::vector<const char*> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+                                                          VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME};
 
 FrameContext::FrameContext(const VkDevice& logicalDevice, u8 graphicsQueueFamilyIndex)
 {
@@ -233,6 +236,7 @@ void Context::chooseBestPhysicalDevice()
             // TODO msaaSamples = getMaxUsableSampleCount();
         }
     }
+    sxi::logger::trace(std::string(currentPhysicalDevice().properties.deviceName) + " chosen as physical device");
 }
 
 void Context::createLogicalDevice(const VkSurfaceKHR& surface, const std::vector<const char*>& layers)
@@ -262,13 +266,24 @@ void Context::createLogicalDevice(const VkSurfaceKHR& surface, const std::vector
     enabledFeatures.samplerAnisotropy = VK_TRUE;
     enabledFeatures.sampleRateShading = VK_TRUE;
 
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline{};
+    timeline.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+    timeline.timelineSemaphore = true;
+
+    VkPhysicalDeviceFeatures2 features2{};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.features.samplerAnisotropy = VK_TRUE;
+    features2.features.sampleRateShading = VK_TRUE;
+    features2.pNext = &timeline;
+
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.queueCreateInfoCount = SXI_TO_U32(queueCreateInfos.size());
-    createInfo.pEnabledFeatures = &enabledFeatures;
-    createInfo.enabledExtensionCount = SXI_TO_U32(deviceExtensions.size());
+    createInfo.pEnabledFeatures = nullptr;
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
+    createInfo.enabledExtensionCount = SXI_TO_U32(deviceExtensions.size());
+    createInfo.pNext = &features2;
 
     if (layers.size() > 0)
     {

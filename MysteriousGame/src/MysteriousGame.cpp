@@ -4,7 +4,6 @@
 #include "SXICore/JobScheduler.h"
 #include "SXICore/Timing.h"
 #include "SXICore/Types.h"
-#include "SXICore/detail/Task.h"
 #include "SXICore/logger/Logger.h"
 #include "SXIRenderer/ECSConfig.h"
 #include "SXIRenderer/Renderer.h"
@@ -12,7 +11,8 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_vulkan.h>
-#include <fstream>
+#include <algorithm>
+#include <limits>
 #include <string>
 
 const std::string BASE_PATH = "/home/victordadaciu/workspace/StartingXI/MysteriousGame/";
@@ -21,51 +21,66 @@ const std::string TEXTURES_PATH = BASE_PATH + "textures/";
 const std::string SHADERS_PATH = BASE_PATH + "shaders/";
 const std::string SHADERS_GEN_PATH = SHADERS_PATH + "generated/";
 
+constexpr uint32_t frameThreshold = 200;
+
 using namespace sxi::types;
 constexpr u32 OBJ_SIDE = 70;
 
 static sxi::ecs::Manager<ECSSettings> mgr;
 static sxi::JobScheduler* scheduler{};
+static size_t frames = 0;
 static sxi::Time timer{};
-static sxi::Time renderTimer{};
-static float renderTime{};
-static sxi::Time localTimer{};
-static float schedulingTime{};
+static sxi::Time jobsTimer{};
+static sxi::Time sdlTimer{};
+static float minFrameTime = std::numeric_limits<float>::max();
+static float maxFrameTime = std::numeric_limits<float>::min();
+static float minRenderTime = std::numeric_limits<float>::max();
+static float maxRenderTime = std::numeric_limits<float>::min();
+static float totalRenderTime{};
+static float minJobsTime = std::numeric_limits<float>::max();
+static float maxJobsTime = std::numeric_limits<float>::min();
+static float totalJobsTime{};
+static float minSDLTime = std::numeric_limits<float>::max();
+static float maxSDLTime = std::numeric_limits<float>::min();
+static float totalSDLTime{};
 
 void printStats(const sxi::TimePoint& timeAtStart, size_t frames)
 {
-    sxi::TimePoint timeAtEnd = timer.time;
-    float timeActive = sxi::Time::elapsed(timeAtStart, timeAtEnd);
-    float msPerSchedule = 1000.f * schedulingTime / frames;
-    float msPerRender = 1000.f * renderTime / frames;
-    float msPerRest = msPerSchedule - msPerRender;
+    float timeActive = sxi::Time::elapsed(timeAtStart, timer.time);
     sxi::logger::info("Game closed successfully!");
     sxi::logger::info("---Stats---");
-    sxi::logger::info("Frames rendered: " + std::to_string(frames));
-    sxi::logger::info("Time active: " + std::to_string(timeActive));
-    sxi::logger::info("Time spent rendering: " + std::to_string(renderTime));
+    sxi::logger::info("Frames rendered:  " + std::to_string(frames));
+    sxi::logger::info("Time active:      " + std::to_string(timeActive));
     sxi::logger::info("---");
-    sxi::logger::info("Avg. FPS: " + std::to_string((int)std::round(frames / timeActive)));
+    sxi::logger::info("Avg. FPS:         " + std::to_string((int)std::round(frames / timeActive)));
+    sxi::logger::info("Avg. frame time:  " + std::to_string(1000.f * timeActive / frames) + "ms");
+    sxi::logger::info("Min frame time:   " + std::to_string(1000.f * minFrameTime) + "ms");
+    sxi::logger::info("Max frame time:   " + std::to_string(1000.f * maxFrameTime) + "ms");
     sxi::logger::info("---");
-    sxi::logger::info("Avg. ms/frame: " + std::to_string(1000.f * timeActive / frames) + "ms");
-    sxi::logger::info("Avg. ms/schedule: " + std::to_string(msPerSchedule) + "ms");
-    sxi::logger::info("Avg. ms/render: " + std::to_string(msPerRender) + "ms");
-    sxi::logger::info("Avg. ms/rest: " + std::to_string(msPerRest) + "ms");
+    sxi::logger::info("Avg. render time: " + std::to_string(1000.f * totalRenderTime / frames) + "ms");
+    sxi::logger::info("Min render time:  " + std::to_string(1000.f * minRenderTime) + "ms");
+    sxi::logger::info("Max render time:  " + std::to_string(1000.f * maxRenderTime) + "ms");
+    sxi::logger::info("---");
+    sxi::logger::info("Avg. jobs time:   " + std::to_string(1000.f * totalJobsTime / frames) + "ms");
+    sxi::logger::info("Min jobs time:    " + std::to_string(1000.f * minJobsTime) + "ms");
+    sxi::logger::info("Max jobs time:    " + std::to_string(1000.f * maxJobsTime) + "ms");
+    sxi::logger::info("---");
+    sxi::logger::info("Avg. SDL time:    " + std::to_string(1000.f * totalSDLTime / frames) + "ms");
+    sxi::logger::info("Min SDL time:     " + std::to_string(1000.f * minSDLTime) + "ms");
+    sxi::logger::info("Max SDL time:     " + std::to_string(1000.f * maxSDLTime) + "ms");
     sxi::logger::info("===Stats===");
 }
 
 static void loop()
 {
-    sxi::logger::trace("loop() started");
-
     SDL_Event e;
     SDL_zero(e);
     bool minimized = false;
     bool running = true;
-    size_t frames = 0;
     sxi::TimePoint timeAtStart = timer.time;
     while (running)
     {
+        sdlTimer.refresh();
         while (SDL_PollEvent(&e))
         {
             if (e.type == SDL_EVENT_WINDOW_MINIMIZED)
@@ -93,23 +108,34 @@ static void loop()
                 }
             }
         }
+        sdlTimer.refresh();
 
-        localTimer.refresh();
+        if (frames > frameThreshold)
+        {
+            minSDLTime = std::min(minSDLTime, sdlTimer.dt);
+            maxSDLTime = std::max(maxSDLTime, sdlTimer.dt);
+            totalSDLTime += sdlTimer.dt;
+        }
+
+        jobsTimer.refresh();
         scheduler->run();
-        localTimer.refresh();
-        schedulingTime += localTimer.dt;
 
         mgr.refresh();
         scheduler->refresh();
         timer.refresh();
+        if (frames > frameThreshold)
+        {
+            minFrameTime = std::min(minFrameTime, timer.dt);
+            maxFrameTime = std::max(maxFrameTime, timer.dt);
+        }
         ++frames;
     }
 }
 
 int main(int argc, char* args[])
 {
-    std::ofstream f("/home/victordadaciu/workspace/StartingXI/log.txt");
-    sxi::logger::init(f);
+    // std::ofstream f("/home/victordadaciu/workspace/StartingXI/log.txt");
+    sxi::logger::init();
     sxi::logger::setName("MysteriousGame");
     sxi::logger::setLogLevel(sxi::logger::LogLevel::TRACE);
 
@@ -140,7 +166,7 @@ int main(int argc, char* args[])
     mgr.refresh();
 
     sxi::logger::trace("Scheduling jobs");
-    constexpr size_t chunkSize = 700;
+    constexpr size_t numChunks = 4;
     sxi::ScheduleId idPos = scheduler->schedule(
         [&](u32 start, u32 end)
         {
@@ -156,7 +182,7 @@ int main(int argc, char* args[])
         {SXI_CHECKPOINT_BEGIN},
         [&]()
         {
-            return sxi::WorkSize(chunkSize, std::ceil(mgr.entityCount<Object>() / SXI_TO_FLOAT(chunkSize)));
+            return sxi::WorkSize(std::ceil(mgr.entityCount<Object>() / SXI_TO_FLOAT(numChunks)), numChunks);
         });
 
     sxi::ScheduleId idRot = scheduler->schedule(
@@ -173,7 +199,7 @@ int main(int argc, char* args[])
         {SXI_CHECKPOINT_BEGIN},
         [&]()
         {
-            return sxi::WorkSize(chunkSize, std::ceil(mgr.entityCount<Object>() / SXI_TO_FLOAT(chunkSize)));
+            return sxi::WorkSize(std::ceil(mgr.entityCount<Object>() / SXI_TO_FLOAT(numChunks)), numChunks);
         });
 
     sxi::ScheduleId idPos2 = scheduler->schedule(
@@ -190,16 +216,27 @@ int main(int argc, char* args[])
         {idPos},
         [&]()
         {
-            return sxi::WorkSize(chunkSize, std::ceil(mgr.entityCount<Object>() / SXI_TO_FLOAT(chunkSize)));
+            return sxi::WorkSize(std::ceil(mgr.entityCount<Object>() / SXI_TO_FLOAT(numChunks)), numChunks);
         });
 
     scheduler->schedule(
         [&](u32 start, u32 end)
         {
-            renderTimer.refresh();
+            jobsTimer.refresh();
+            if (frames > frameThreshold)
+            {
+                minJobsTime = std::min(minJobsTime, jobsTimer.dt);
+                maxJobsTime = std::max(maxJobsTime, jobsTimer.dt);
+                totalJobsTime += jobsTimer.dt;
+            }
             sxi::renderer::render(mgr, timer, start, end);
-            renderTimer.refresh();
-            renderTime += renderTimer.dt;
+            jobsTimer.refresh();
+            if (frames > frameThreshold)
+            {
+                minRenderTime = std::min(minRenderTime, jobsTimer.dt);
+                maxRenderTime = std::max(maxRenderTime, jobsTimer.dt);
+                totalRenderTime += jobsTimer.dt;
+            }
         },
         {idRot, idPos2});
     scheduler->refresh();

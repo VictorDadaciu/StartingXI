@@ -15,6 +15,7 @@
 #include <SXICore/Types.h>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace sxi::renderer
 {
@@ -160,9 +161,11 @@ void render(ecs::Manager<TSettings>& mgr, const Time& time, size_t start, size_t
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &frameContext->commandBuffer;
 
-    VkSemaphore signalSemaphores[] = {detail::window->swapchain->renderFinishedSemaphores[imageIndex]};
+    VkSemaphore signalSemaphores[] = {detail::window->swapchain->renderFinishedSemaphores[imageIndex],
+                                      detail::window->swapchain->timelineSemaphores[imageIndex]};
+
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+    submitInfo.pSignalSemaphores = &detail::window->swapchain->renderFinishedSemaphores[imageIndex];
 
     if (vkQueueSubmit(detail::context->graphicsQueue, 1, &submitInfo, frameContext->inFlightFence) != VK_SUCCESS)
         throw InvalidArgumentException("Failed to submit draw command buffer");
@@ -171,7 +174,7 @@ void render(ecs::Manager<TSettings>& mgr, const Time& time, size_t start, size_t
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    presentInfo.pWaitSemaphores = &detail::window->swapchain->renderFinishedSemaphores[imageIndex];
 
     VkSwapchainKHR swapChains[] = {detail::window->swapchain->swapchain};
     presentInfo.swapchainCount = 1;

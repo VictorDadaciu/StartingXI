@@ -2,18 +2,23 @@
 
 #include "MPL/Macros.h"
 #include "Types.h"
-#include "detail/Task.h"
 
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <thread_pool/thread_pool.h>
 #include <vector>
 
 namespace sxi
 {
+using namespace types;
+
 SXI_MPL_STRONG_TYPEDEF(uint16_t, ScheduleId)
+#define SXI_TASK_EVERYTHING 0xFFFF
+
+using Work = std::function<void(u32, u32)>;
 
 namespace detail
 {
