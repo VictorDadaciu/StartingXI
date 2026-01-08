@@ -3,6 +3,8 @@ import subprocess
 import argparse
 import sys
 
+from shader_parser import Parser, PipelineInfo, ShaderModuleInfo
+
 def parse_args() -> None:
     parser = argparse.ArgumentParser(
         prog="SXI Shader Compiler Utility",
@@ -95,5 +97,11 @@ if __name__ == "__main__":
                  recompile_files(set(filter(needs_recompilation, glsl_filenames.intersection(spirv_filenames))))
     if errors_num > 0:
         print(f"{errors_num} file(s) failed to compile")
-    else:
-        print("All shader modules up-to-date")
+        exit(1)
+
+    print("All shader modules up-to-date")
+    print("Parsing shader files...")
+    modules: dict[str, ShaderModuleInfo] = {file: Parser(to_glsl_file(file)).info for file in glsl_filenames}
+    pipelines: dict[str, PipelineInfo] = {pipeline_name: PipelineInfo(pipeline_name, {module_name.split('.')[1]: module_info for module_name, module_info in modules.items() if module_name.split('.')[0] == pipeline_name}) for pipeline_name in {file.split('.')[0] for file in glsl_filenames}}
+    for name, info in pipelines.items():
+        print(f"    |={name}=|\n{info}\n")

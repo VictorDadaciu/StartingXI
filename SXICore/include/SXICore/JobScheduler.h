@@ -27,19 +27,12 @@ namespace detail
 
 struct WorkSize final
 {
-    WorkSize() : m_chunkSize(SXI_TASK_EVERYTHING), m_numChunks(1) {}
+    WorkSize() : chunkSize(SXI_TASK_EVERYTHING), numChunks(1) {}
 
-    WorkSize(u16 chunkSize, u16 numChunks) : m_chunkSize(chunkSize), m_numChunks(numChunks)
-    {
-        assert(m_chunkSize > 0);
-        assert(m_numChunks > 0);
-    }
+    WorkSize(u16 chunkSize_, u16 numChunks_) : chunkSize(chunkSize_), numChunks(numChunks_) {}
 
-private:
-    u16 m_chunkSize;
-    u16 m_numChunks;
-
-    friend class sxi::detail::Job;
+    u16 chunkSize;
+    u16 numChunks;
 };
 
 using WorkSizeCalculator = std::function<WorkSize()>;
@@ -89,14 +82,12 @@ namespace detail
         Job(JobScheduler& scheduler, ScheduleId scheduleId, Work&& work, WorkSizeCalculator&& workSizeCalculator) :
             m_scheduleId(scheduleId), m_work(work), m_workSizeCalculator(workSizeCalculator)
         {
-            assert(s_scheduler != nullptr);
         }
 
         Job(const Job& other) :
             m_scheduleId(other.m_scheduleId), m_work(other.m_work), m_workSizeCalculator(other.m_workSizeCalculator),
             m_tasksCounter(other.m_tasksCounter.load())
         {
-            assert(s_scheduler != nullptr);
         }
 
         void createAndRunTasks();

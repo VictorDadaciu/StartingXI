@@ -17,10 +17,13 @@ namespace detail
     void Job::createAndRunTasks()
     {
         WorkSize workSize = m_workSizeCalculator();
-        m_tasksCounter = workSize.m_numChunks;
+        assert(workSize.chunkSize > 0);
+        assert(workSize.numChunks > 0);
+
+        m_tasksCounter = workSize.numChunks;
         u32 start = 0;
-        u32 end = workSize.m_chunkSize;
-        for (u16 chunk = 0; chunk < workSize.m_numChunks; ++chunk)
+        u32 end = workSize.chunkSize;
+        for (u16 chunk = 0; chunk < workSize.numChunks; ++chunk)
         {
             s_threadPool->enqueue_detach(
                 [this](u32 start, u32 end)
@@ -31,7 +34,7 @@ namespace detail
                 start,
                 end);
             start = end;
-            end += workSize.m_chunkSize;
+            end += workSize.chunkSize;
         }
     }
 
@@ -39,6 +42,7 @@ namespace detail
     {
         if (--m_tasksCounter == 0)
         {
+            assert(s_scheduler != nullptr);
             s_scheduler->jobFinished(m_scheduleId);
         }
     }

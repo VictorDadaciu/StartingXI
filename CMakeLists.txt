@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15..4.0)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 project(StartingXI VERSION 1.0
                    DESCRIPTION "C++ game engine running on Vulkan"
@@ -65,5 +65,7 @@ FetchContent_MakeAvailable(
 add_subdirectory(SXICore)
 add_subdirectory(SXIMath)
 add_subdirectory(SXIPathfinding)
+
+set(SXI_SHADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MysteriousGame/shaders)
 add_subdirectory(SXIRenderer)
 add_subdirectory(MysteriousGame)

@@ -9,7 +9,9 @@ layout(set = 1, binding = 0) uniform sampler2D albedo;
 layout(set = 0, binding = 1) uniform FrameLight
 {
     vec4 light; // xyz position, w attenuation
-} u_light;
+}
+
+u_light;
 
 layout(location = 0) out vec4 outColor;
 
@@ -25,7 +27,7 @@ void main()
 
     // diffuse
     vec3 norm = normalize(fragNorm);
-    vec3 lightDir = normalize(lightPos - fragModelPos);  
+    vec3 lightDir = normalize(lightPos - fragModelPos);
     float diff = max(dot(norm, lightDir), 0.0);
 
     // specular
@@ -34,5 +36,5 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
 
     float lightStrength = specularStrength * spec + ambientStrength + diff;
-    outColor = vec4(attenuation * lightColor * lightStrength, 1.0f) * texture(albedo, fragUV); 
+    outColor = vec4(attenuation * lightColor * lightStrength, 1.0f) * texture(albedo, fragUV);
 }

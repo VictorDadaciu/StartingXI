@@ -160,6 +160,11 @@ static VkInstance createInstance(const std::vector<const char*>& validationLayer
 
 static void setupDebugCallback(const VkInstance& instance)
 {
+    if (!enableValidationLayers)
+    {
+        return;
+    }
+
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     populateDebugMessengerCreateInfo(createInfo);
 
@@ -183,9 +188,12 @@ void init(u32 width, u32 height, bool releaseValidationLayers)
     enableValidationLayers |= releaseValidationLayers;
     std::vector<const char*> validationLayers{};
     if (enableValidationLayers)
+    {
         validationLayers.push_back("VK_LAYER_KHRONOS_validation");
+    }
 
     VkInstance instance = createInstance(validationLayers);
+    setupDebugCallback(instance);
 
     SDL_Window* sdlWindow{};
     if (sdlWindow = SDL_CreateWindow("Mysterious Game", width, height, SDL_WINDOW_VULKAN); sdlWindow == nullptr)

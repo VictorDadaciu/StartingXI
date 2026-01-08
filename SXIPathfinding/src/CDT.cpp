@@ -10,24 +10,16 @@
 
 namespace sxi
 {
-CDT::CDT(float x1, float y1, float x2, float y2) :
-    mapTopLeft(x1, y1), mapBotRight(x2, y2)
+CDT::CDT(float x1, float y1, float x2, float y2) : mapTopLeft(x1, y1), mapBotRight(x2, y2)
 {
-    MapPoint* topLeft =
-        new MapPoint(glm::vec2(x1 - CDT_BUFFER, y1 - CDT_BUFFER));
-    MapPoint* topRight = new MapPoint(
-        glm::vec2(x1 - CDT_BUFFER, y1 + 2 * (y2 - y1) + 3 * CDT_BUFFER));
-    MapPoint* botLeft = new MapPoint(
-        glm::vec2(x1 + 2 * (x2 - x1) + 3 * CDT_BUFFER, y1 - CDT_BUFFER));
+    MapPoint* topLeft = new MapPoint(glm::vec2(x1 - CDT_BUFFER, y1 - CDT_BUFFER));
+    MapPoint* topRight = new MapPoint(glm::vec2(x1 - CDT_BUFFER, y1 + 2 * (y2 - y1) + 3 * CDT_BUFFER));
+    MapPoint* botLeft = new MapPoint(glm::vec2(x1 + 2 * (x2 - x1) + 3 * CDT_BUFFER, y1 - CDT_BUFFER));
     fallback = makeTriangle(topLeft, topRight, botLeft);
-    MapPoint* mapTopLeft =
-        new MapPoint(glm::vec2(x1 - MAP_BUFFER, y1 - MAP_BUFFER));
-    MapPoint* mapTopRight =
-        new MapPoint(glm::vec2(x1 - MAP_BUFFER, y2 + MAP_BUFFER));
-    MapPoint* mapBotRight =
-        new MapPoint(glm::vec2(x2 + MAP_BUFFER, y2 + MAP_BUFFER));
-    MapPoint* mapBotLeft =
-        new MapPoint(glm::vec2(x2 + MAP_BUFFER, y1 - MAP_BUFFER));
+    MapPoint* mapTopLeft = new MapPoint(glm::vec2(x1 - MAP_BUFFER, y1 - MAP_BUFFER));
+    MapPoint* mapTopRight = new MapPoint(glm::vec2(x1 - MAP_BUFFER, y2 + MAP_BUFFER));
+    MapPoint* mapBotRight = new MapPoint(glm::vec2(x2 + MAP_BUFFER, y2 + MAP_BUFFER));
+    MapPoint* mapBotLeft = new MapPoint(glm::vec2(x2 + MAP_BUFFER, y1 - MAP_BUFFER));
     std::unordered_set<QuarterEdge*> toCull;
     insert(mapTopLeft, nullptr, toCull);
     insert(mapTopRight, nullptr, toCull);
@@ -79,13 +71,7 @@ inline static float radiusOfTriangle(glm::vec2 a, glm::vec2 b, glm::vec2 c)
     float AB = glm::length(b - a);
     float BC = glm::length(c - b);
     float CA = glm::length(a - c);
-    return AB *
-           BC *
-           CA /
-           sqrtf((AB + BC + CA) *
-                 (AB + BC - CA) *
-                 (BC + CA - AB) *
-                 (CA + AB - BC));
+    return AB * BC * CA / sqrtf((AB + BC + CA) * (AB + BC - CA) * (BC + CA - AB) * (CA + AB - BC));
 }
 
 std::vector<glm::vec2> CDT::removePoint(MapPoint* point)
@@ -104,8 +90,7 @@ std::vector<glm::vec2> CDT::removePoint(MapPoint* point)
             edgesToDelete.insert(inwards);
             if (!polyStartEdge)
                 polyStartEdge = inwards->prev;
-            if (!isBoundaryPoint(inwards->data->v) &&
-                inwards->data->start == inwards)
+            if (!isBoundaryPoint(inwards->data->v) && inwards->data->start == inwards)
                 inwards->data->start = inwards->prevOn();
             desplice(inwards->prev, inwards);
             ptr = ptr->next;
@@ -113,8 +98,7 @@ std::vector<glm::vec2> CDT::removePoint(MapPoint* point)
         // delete everything collected
         {
             delete point;
-            std::vector<QuarterEdge*> edgesVec(edgesToDelete.begin(),
-                                               edgesToDelete.end());
+            std::vector<QuarterEdge*> edgesVec(edgesToDelete.begin(), edgesToDelete.end());
             for (int i = 0; i < edgesVec.size(); i++)
                 delete edgesVec[i];
         }
@@ -137,9 +121,7 @@ std::vector<glm::vec2> CDT::removePoint(MapPoint* point)
             glm::vec2 b = polygon[right]->data->v - polygon[i]->data->v;
             radii[i] = std::numeric_limits<float>::max();
             if (glm::cross(b, a) > 0)
-                radii[i] = radiusOfTriangle(polygon[left]->data->v,
-                                            polygon[i]->data->v,
-                                            polygon[right]->data->v);
+                radii[i] = radiusOfTriangle(polygon[left]->data->v, polygon[i]->data->v, polygon[right]->data->v);
             left = i;
             a = b;
         }
@@ -162,8 +144,7 @@ std::vector<glm::vec2> CDT::removePoint(MapPoint* point)
         // smallest circle found, make new edge, splice it in
         int left = (removalIndex - 1 + polygon.size()) % polygon.size();
         int right = (removalIndex + 1) % polygon.size();
-        QuarterEdge* newEdge =
-            makeQuadEdge(polygon[left]->data, polygon[right]->data);
+        QuarterEdge* newEdge = makeQuadEdge(polygon[left]->data, polygon[right]->data);
         toCull.insert(newEdge);
         splice(polygon[left], newEdge);
         splice(polygon[right], newEdge->sym);
@@ -183,13 +164,11 @@ std::vector<glm::vec2> CDT::removePoint(MapPoint* point)
         radii[midLeft] = std::numeric_limits<float>::max();
         radii[midRight] = std::numeric_limits<float>::max();
         if (glm::cross(b, a) > 0)
-            radii[midLeft] = radiusOfTriangle(polygon[left]->data->v,
-                                              polygon[midLeft]->data->v,
-                                              polygon[midRight]->data->v);
+            radii[midLeft] =
+                radiusOfTriangle(polygon[left]->data->v, polygon[midLeft]->data->v, polygon[midRight]->data->v);
         if (glm::cross(c, b) > 0)
-            radii[midRight] = radiusOfTriangle(polygon[midLeft]->data->v,
-                                               polygon[midRight]->data->v,
-                                               polygon[right]->data->v);
+            radii[midRight] =
+                radiusOfTriangle(polygon[midLeft]->data->v, polygon[midRight]->data->v, polygon[right]->data->v);
     }
     // cull all affected edges
     for (QuarterEdge* edge : toCull)
@@ -216,9 +195,7 @@ std::vector<glm::vec2> CDT::removeShape(const MapShape& shape)
     return removePoint(pointsToDelete[pointsToDelete.size() - 1]);
 }
 
-QuarterEdge* CDT::forceConnect(MapPoint* start,
-                               MapPoint* end,
-                               std::unordered_set<QuarterEdge*>& toCull) const
+QuarterEdge* CDT::forceConnect(MapPoint* start, MapPoint* end, std::unordered_set<QuarterEdge*>& toCull) const
 {
     if (QuarterEdge* edge = connectionExists(start, end))
     {
@@ -270,8 +247,7 @@ QuarterEdge* CDT::forceConnect(MapPoint* start,
                     toCull.insert(next);
                 edge = next->sym->next;
                 if (edge->constrained)
-                    throw std::runtime_error(
-                        "Cannot intersect constrained edges");
+                    throw std::runtime_error("Cannot intersect constrained edges");
                 intersections.push(edge);
                 continue;
             }
@@ -291,8 +267,7 @@ QuarterEdge* CDT::forceConnect(MapPoint* start,
                     toCull.insert(prev);
                 edge = ptr->sym->next;
                 if (edge->constrained)
-                    throw std::runtime_error(
-                        "Cannot intersect constrained edges");
+                    throw std::runtime_error("Cannot intersect constrained edges");
                 intersections.push(edge);
                 continue;
             }
@@ -319,11 +294,7 @@ QuarterEdge* CDT::forceConnect(MapPoint* start,
             Ray dataRay(start->v, edge->data->v - start->v);
             Ray symRay(start->v, edge->sym->data->v - start->v);
             // intersection rules and edge-cases (pun not intended)
-            if (edge->data ==
-                start ||
-                edge->sym->data ==
-                end ||
-                !endRay.between(dataRay, symRay))
+            if (edge->data == start || edge->sym->data == end || !endRay.between(dataRay, symRay))
             {
                 newEdges.push_back(edge);
                 continue;
@@ -349,14 +320,8 @@ QuarterEdge* CDT::forceConnect(MapPoint* start,
             if (!edge->constrained &&
                 passesBoundaryRules(edge, opposite) &&
                 (withBoundary(edge) ||
-                 insideCircumspectCircle(ptr->data,
-                                         ptr->sym->data,
-                                         opposite->sym->data,
-                                         opposite->data) ||
-                 insideCircumspectCircle(ptr->sym->data,
-                                         opposite->data,
-                                         opposite->sym->data,
-                                         ptr->data)))
+                 insideCircumspectCircle(ptr->data, ptr->sym->data, opposite->sym->data, opposite->data) ||
+                 insideCircumspectCircle(ptr->sym->data, opposite->data, opposite->sym->data, ptr->data)))
             {
                 flip(edge);
                 swapped = true;
@@ -382,8 +347,7 @@ QuarterEdge* CDT::connectionExists(MapPoint* start, MapPoint* end) const
     return nullptr;
 }
 
-MapShape CDT::insertShape(const std::vector<glm::vec2>& coords,
-                          QuarterEdge* bestEdge)
+MapShape CDT::insertShape(const std::vector<glm::vec2>& coords, QuarterEdge* bestEdge)
 {
     std::vector<MapPoint*> points(coords.size());
     std::transform(coords.cbegin(),
@@ -412,9 +376,7 @@ MapShape CDT::insertShape(const std::vector<glm::vec2>& coords,
     return MapShape(shapeEdges);
 }
 
-QuarterEdge* CDT::insert(MapPoint* p,
-                         QuarterEdge* bestEdge,
-                         std::unordered_set<QuarterEdge*>& toCull)
+QuarterEdge* CDT::insert(MapPoint* p, QuarterEdge* bestEdge, std::unordered_set<QuarterEdge*>& toCull)
 {
     QuarterEdge* current = insertPoint(findEdge(p->v, bestEdge), p)->sym;
     QuarterEdge* ptr = current;
@@ -429,14 +391,8 @@ QuarterEdge* CDT::insert(MapPoint* p,
         if (!edge->constrained &&
             passesBoundaryRules(edge, opposite) &&
             (withBoundary(edge) ||
-             insideCircumspectCircle(ptr->data,
-                                     ptr->sym->data,
-                                     opposite->sym->data,
-                                     opposite->data) ||
-             insideCircumspectCircle(ptr->sym->data,
-                                     opposite->data,
-                                     opposite->sym->data,
-                                     ptr->data)))
+             insideCircumspectCircle(ptr->data, ptr->sym->data, opposite->sym->data, opposite->data) ||
+             insideCircumspectCircle(ptr->sym->data, opposite->data, opposite->sym->data, ptr->data)))
         {
             flip(edge);
             continue;
@@ -566,8 +522,7 @@ QuarterEdge* CDT::connect(QuarterEdge* a, QuarterEdge* b) const
     return newEdge;
 }
 
-QuarterEdge* CDT::insertPoint(QuarterEdge* polygonEdge,
-                              MapPoint* MapPoint) const
+QuarterEdge* CDT::insertPoint(QuarterEdge* polygonEdge, MapPoint* MapPoint) const
 {
     QuarterEdge* firstSpoke = makeQuadEdge(polygonEdge->data, MapPoint);
     splice(polygonEdge, firstSpoke);
@@ -584,8 +539,7 @@ void CDT::findNewOnForPoints(QuarterEdge* edge) const
 {
     if (!isBoundaryPoint(edge->data->v) && edge->data->start == edge)
         edge->data->start = edge->prevOn();
-    if (!isBoundaryPoint(edge->sym->data->v) &&
-        edge->sym->data->start == edge->sym)
+    if (!isBoundaryPoint(edge->sym->data->v) && edge->sym->data->start == edge->sym)
         edge->sym->data->start = edge->sym->prevOn();
 }
 
@@ -611,8 +565,7 @@ void CDT::flip(QuarterEdge* edge) const
     setOn(edge, !withBoundary(edge));
 }
 
-void CDT::collect(std::vector<MapPoint*>& points,
-                  std::vector<QuarterEdge*>& edges) const
+void CDT::collect(std::vector<MapPoint*>& points, std::vector<QuarterEdge*>& edges) const
 {
     std::queue<QuarterEdge*> open;
     open.push(fallback);
@@ -665,9 +618,7 @@ void CDT::collect(std::vector<glm::vec2>& points,
         QuarterEdge* it = ptr;
         do
         {
-            if (edgesAdded.find(it) ==
-                edgesAdded.end() ||
-                edgesAdded.find(it->sym) == edgesAdded.end())
+            if (edgesAdded.find(it) == edgesAdded.end() || edgesAdded.find(it->sym) == edgesAdded.end())
             {
                 edgesAdded.insert(it);
                 MapPoint* MapPoint = it->sym->data;

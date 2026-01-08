@@ -60,25 +60,13 @@ struct RSTNodeLevelValue
 
     RSTNodeLevelValue() = default;
 
-    RSTNodeLevelValue(const RSTNode& node, int8_t atLevel) :
-        node(node), atLevel(atLevel)
-    {
-    }
+    RSTNodeLevelValue(const RSTNode& node, int8_t atLevel) : node(node), atLevel(atLevel) {}
 
-    RSTNodeLevelValue(const RSTNode& node, int8_t atLevel, float f) :
-        node(node), f(f), atLevel(atLevel)
-    {
-    }
+    RSTNodeLevelValue(const RSTNode& node, int8_t atLevel, float f) : node(node), f(f), atLevel(atLevel) {}
 
-    inline bool operator>(const RSTNodeLevelValue& other) const
-    {
-        return f > other.f;
-    }
+    inline bool operator>(const RSTNodeLevelValue& other) const { return f > other.f; }
 
-    inline bool operator<(const RSTNodeLevelValue& other) const
-    {
-        return f < other.f;
-    }
+    inline bool operator<(const RSTNodeLevelValue& other) const { return f < other.f; }
 };
 
 class RST
@@ -136,16 +124,14 @@ public:
     inline RSTNode* at(uint8_t index) const
     {
         if (index < 0 || index >= n)
-            throw std::runtime_error(
-                "Cannot access R* tree's branch's child at that index");
+            throw std::runtime_error("Cannot access R* tree's branch's child at that index");
         return &children[index];
     }
 
     inline void remove(uint8_t index)
     {
         if (index < 0 || index >= n)
-            throw std::runtime_error(
-                "Cannot access R* tree's branch's child at that index");
+            throw std::runtime_error("Cannot access R* tree's branch's child at that index");
         children[index] = children[--n];
     }
 

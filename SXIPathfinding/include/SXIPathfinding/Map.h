@@ -1,6 +1,8 @@
 #pragma once
 
+#include "CDT.h"
 #include "MapShape.h"
+#include "RST.h"
 
 #include <memory>
 
@@ -40,10 +42,7 @@ public:
     bool inside(float, float) const;
 
     std::vector<std::pair<AABB, int8_t>> collectRST() const;
-    void collectCDT(std::vector<glm::vec2>&,
-                    std::vector<bool>&,
-                    std::vector<int>&,
-                    bool) const;
+    void collectCDT(std::vector<glm::vec2>&, std::vector<bool>&, std::vector<int>&, bool) const;
 
 private:
     Map();

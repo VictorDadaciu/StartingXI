@@ -42,3 +42,24 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     include/${PROJECT_NAME}
     ../SXIMath/include
     ../SXICore/include)
+
+if (DEFINED SXI_SHADERS_DIR)
+    message("SXI_SHADERS_DIR defined as ${SXI_SHADERS_DIR}")
+    file(GLOB SHADER_MODULES 
+        ${SXI_SHADERS_DIR}/*.vert
+        ${SXI_SHADERS_DIR}/*.frag)
+
+    add_custom_target(compile_shaders ALL
+        python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/compile_shaders.py ${SXI_SHADERS_DIR}/ -o ${CMAKE_CURRENT_SOURCE_DIR}/resources/shaders/generated
+        DEPENDS ${SHADER_MODULES}
+        COMMENT "Compiling shaders..."
+        VERBATIM)
+else()
+    message("WARNING: Variable SXI_SHADERS_DIR not provided, cannot compile/generate shader code!")
+endif()
+
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
+endif()

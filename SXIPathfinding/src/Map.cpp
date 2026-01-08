@@ -2,13 +2,11 @@
 
 #include "CDT.h"
 #include "PolyAnya.h"
-#include "RStarTree.h"
+#include "RST.h"
 
 namespace sxi
 {
-Map::Map() :
-    shapes(ShapeType::Count), cdt(std::make_unique<CDT>()),
-    rst(std::make_unique<RST>()), initialized(false)
+Map::Map() : shapes(ShapeType::Count), cdt(std::make_unique<CDT>()), rst(std::make_unique<RST>()), initialized(false)
 {
 }
 
@@ -31,8 +29,7 @@ void Map::insert(ShapeType type, const std::vector<glm::vec2>& points)
 
     std::vector<MapShape>& shapesOfType = shapes[type];
     uint32_t index = shapesOfType.size();
-    MapShape newShape =
-        cdt->insertShape(std::move(points), rst->getBestEdge(points[0]));
+    MapShape newShape = cdt->insertShape(std::move(points), rst->getBestEdge(points[0]));
     newShape.leaf = new RSTLeaf(type, index);
     rst->insert(newShape.leaf, newShape.generateBoundingBox());
     shapesOfType.push_back(newShape);
@@ -89,8 +86,7 @@ std::vector<glm::vec2> Map::findPath(float x, float y, float gx, float gy) const
     return sxi::runPolyAnya(start, goal, startPolyEdge, goalPolyEdge, metadata);
 }
 
-std::vector<glm::vec2> Map::findPath(const glm::vec2& tryStart,
-                                     const glm::vec2& tryGoal) const
+std::vector<glm::vec2> Map::findPath(const glm::vec2& tryStart, const glm::vec2& tryGoal) const
 {
     PAMetadata metadata;
     glm::vec2 start, goal;

@@ -1,8 +1,7 @@
-#include "RStarTree.h"
-
 #include "CDT.h"
 #include "Map.h"
 #include "MapShape.h"
+#include "RST.h"
 
 #include <algorithm>
 #include <cstring>
@@ -67,8 +66,7 @@ RSTLeaf* RST::shapeAt(const glm::vec2& point) const
         if (RST::depth == -1)
         {
             RSTLeaf* leaf = static_cast<RSTLeaf*>(root->data);
-            MapShape& mapShape =
-                Map::instance().shapes[leaf->type][leaf->index];
+            MapShape& mapShape = Map::instance().shapes[leaf->type][leaf->index];
             if (mapShape.inside(point))
                 return leaf;
             else
@@ -92,10 +90,8 @@ RSTLeaf* RST::shapeAt(const glm::vec2& point) const
             {
                 if (element.atLevel == RST::depth)
                 {
-                    RSTLeaf* leaf =
-                        static_cast<RSTLeaf*>(branch->children[i].data);
-                    MapShape& mapShape =
-                        Map::instance().shapes[leaf->type][leaf->index];
+                    RSTLeaf* leaf = static_cast<RSTLeaf*>(branch->children[i].data);
+                    MapShape& mapShape = Map::instance().shapes[leaf->type][leaf->index];
                     if (mapShape.inside(point))
                         return leaf;
                 }
@@ -120,8 +116,7 @@ bool RST::inside(const glm::vec2& point) const
         if (RST::depth == -1)
         {
             RSTLeaf* leaf = static_cast<RSTLeaf*>(root->data);
-            MapShape& mapShape =
-                Map::instance().shapes[leaf->type][leaf->index];
+            MapShape& mapShape = Map::instance().shapes[leaf->type][leaf->index];
             if (mapShape.inside(point))
                 return true;
             else
@@ -145,10 +140,8 @@ bool RST::inside(const glm::vec2& point) const
             {
                 if (element.atLevel == RST::depth)
                 {
-                    RSTLeaf* leaf =
-                        static_cast<RSTLeaf*>(branch->children[i].data);
-                    MapShape& mapShape =
-                        Map::instance().shapes[leaf->type][leaf->index];
+                    RSTLeaf* leaf = static_cast<RSTLeaf*>(branch->children[i].data);
+                    MapShape& mapShape = Map::instance().shapes[leaf->type][leaf->index];
                     if (mapShape.inside(point))
                         return true;
                 }
@@ -178,10 +171,7 @@ QuarterEdge* RST::getBestEdge(const glm::vec2& point, glm::vec2& newPoint) const
             return mapShape.closestEdgeForPointOutside(point);
     }
 
-    std::priority_queue<RSTNodeLevelValue,
-                        std::vector<RSTNodeLevelValue>,
-                        std::greater<RSTNodeLevelValue>>
-        open;
+    std::priority_queue<RSTNodeLevelValue, std::vector<RSTNodeLevelValue>, std::greater<RSTNodeLevelValue>> open;
     std::queue<RSTNodeLevelValue> inside;
     if (root->aabb.inside(point))
         inside.emplace(*root, 0);
@@ -199,18 +189,13 @@ QuarterEdge* RST::getBestEdge(const glm::vec2& point, glm::vec2& newPoint) const
             {
                 if (element.atLevel == RST::depth)
                 {
-                    RSTLeaf* leaf =
-                        static_cast<RSTLeaf*>(branch->children[i].data);
-                    MapShape& mapShape =
-                        Map::instance().shapes[leaf->type][leaf->index];
+                    RSTLeaf* leaf = static_cast<RSTLeaf*>(branch->children[i].data);
+                    MapShape& mapShape = Map::instance().shapes[leaf->type][leaf->index];
                     if (mapShape.inside(point))
-                        return mapShape.closestEdgeForPointInside(point,
-                                                                  newPoint);
+                        return mapShape.closestEdgeForPointInside(point, newPoint);
                     else
                         open.emplace(
-                            branch->children[i],
-                            element.atLevel + 1,
-                            branch->children[i].aabb.sqrDistance(point));
+                            branch->children[i], element.atLevel + 1, branch->children[i].aabb.sqrDistance(point));
                 }
                 else
                 {
@@ -219,9 +204,7 @@ QuarterEdge* RST::getBestEdge(const glm::vec2& point, glm::vec2& newPoint) const
             }
             else
             {
-                open.emplace(branch->children[i],
-                             element.atLevel + 1,
-                             branch->children[i].aabb.sqrDistance(point));
+                open.emplace(branch->children[i], element.atLevel + 1, branch->children[i].aabb.sqrDistance(point));
             }
         }
     }
@@ -232,15 +215,12 @@ QuarterEdge* RST::getBestEdge(const glm::vec2& point, glm::vec2& newPoint) const
         if (element.atLevel == RST::depth + 1)
         {
             RSTLeaf* leaf = static_cast<RSTLeaf*>(element.node.data);
-            MapShape& mapShape =
-                Map::instance().shapes[leaf->type][leaf->index];
+            MapShape& mapShape = Map::instance().shapes[leaf->type][leaf->index];
             return mapShape.closestEdgeForPointOutside(point);
         }
         RSTBranch* branch = static_cast<RSTBranch*>(element.node.data);
         for (int i = 0; i < branch->n; i++)
-            open.emplace(branch->children[i],
-                         element.atLevel + 1,
-                         branch->children[i].aabb.sqrDistance(point));
+            open.emplace(branch->children[i], element.atLevel + 1, branch->children[i].aabb.sqrDistance(point));
     }
     return nullptr;
 }
@@ -271,10 +251,7 @@ void RST::insert(RSTLeaf* leaf, AABB&& aabb)
     }
 }
 
-void RST::insertAt(RSTNode* node,
-                   RSTNode&& newNode,
-                   int8_t level,
-                   const int8_t desiredLevel)
+void RST::insertAt(RSTNode* node, RSTNode&& newNode, int8_t level, const int8_t desiredLevel)
 {
     RSTBranch* branch = static_cast<RSTBranch*>(node->data);
     if (level == desiredLevel)
@@ -297,8 +274,7 @@ void RST::insertAt(RSTNode* node,
         else
         {
             overflowed(level);
-            std::vector<RSTNode> overflowVec =
-                node->overflow(std::move(newNode), level);
+            std::vector<RSTNode> overflowVec = node->overflow(std::move(newNode), level);
             for (RSTNode overflowNode : overflowVec)
                 insertionQueue.emplace(overflowNode, level);
             node->recreateBoundingBox();
@@ -330,8 +306,7 @@ void RSTNode::recreateBoundingBox()
         aabb = AABB::combine(aabb, branch->children[i].aabb);
 }
 
-static std::vector<RSTNode> mergeWithNewNode(RSTNode* children,
-                                             RSTNode&& newNode)
+static std::vector<RSTNode> mergeWithNewNode(RSTNode* children, RSTNode&& newNode)
 {
     std::vector<RSTNode> allNodes(RST::M + 1);
     memcpy((void*)allNodes.data(), children, RST::M * sizeof(RSTNode));
@@ -344,19 +319,16 @@ std::vector<RSTNode> RSTNode::overflow(RSTNode&& newNode, int8_t level)
     RSTBranch* branch = static_cast<RSTBranch*>(data);
     glm::vec2 center = aabb.center();
     aabb = AABB::invalid();
-    std::vector<RSTNode> allChildren =
-        mergeWithNewNode(branch->children, std::move(newNode));
+    std::vector<RSTNode> allChildren = mergeWithNewNode(branch->children, std::move(newNode));
     branch->clear();
     std::vector<RSTNodeLevelValue> nodesWithDists(allChildren.size());
-    std::transform(
-        allChildren.cbegin(),
-        allChildren.cend(),
-        nodesWithDists.begin(),
-        [level, center](const RSTNode& node)
-        {
-            return RSTNodeLevelValue(
-                node, level, glm::sqrLength(node.aabb.center() - center));
-        });
+    std::transform(allChildren.cbegin(),
+                   allChildren.cend(),
+                   nodesWithDists.begin(),
+                   [level, center](const RSTNode& node)
+                   {
+                       return RSTNodeLevelValue(node, level, glm::sqrLength(node.aabb.center() - center));
+                   });
     // sort by distance to center of current parent aabb
     std::sort(nodesWithDists.begin(), nodesWithDists.end());
     // re-add closest children to current branch
@@ -378,8 +350,7 @@ RSTNode RSTNode::split(RSTNode&& newNode)
 {
     RSTBranch* branch = static_cast<RSTBranch*>(data);
     aabb = AABB::invalid();
-    std::vector<RSTNode> sortedChildren =
-        mergeWithNewNode(branch->children, std::move(newNode));
+    std::vector<RSTNode> sortedChildren = mergeWithNewNode(branch->children, std::move(newNode));
     branch->clear();
     RSTBranch* splitBranch = new RSTBranch();
     RSTNode splitNode = RSTNode(splitBranch, AABB::invalid());
@@ -407,8 +378,7 @@ RSTNode RSTNode::split(RSTNode&& newNode)
                       float rby = r.aabb.botRight.y;
                       return lty < rty || (lty == rty && lby < rby);
                   });
-        float goodnessX = std::numeric_limits<float>::max(),
-              goodnessY = std::numeric_limits<float>::max();
+        float goodnessX = std::numeric_limits<float>::max(), goodnessY = std::numeric_limits<float>::max();
         // x axis
         {
             AABB frontBB = AABB::invalid();
@@ -473,13 +443,11 @@ RSTNode RSTNode::split(RSTNode&& newNode)
                 }
             }
         }
-        sortedChildren =
-            goodnessX < goodnessY ? std::move(sortedByX) : std::move(sortedByY);
+        sortedChildren = goodnessX < goodnessY ? std::move(sortedByX) : std::move(sortedByY);
     }
     // choose distribution
     {
-        float minOverlap = std::numeric_limits<float>::max(),
-              minArea = std::numeric_limits<float>::max();
+        float minOverlap = std::numeric_limits<float>::max(), minArea = std::numeric_limits<float>::max();
         uint8_t bestIndex = RST::m;
         uint8_t until = RST::M - RST::m + 1;
         for (int i = 0; i < RST::m; i++)
@@ -489,8 +457,7 @@ RSTNode RSTNode::split(RSTNode&& newNode)
         }
         for (int i = until; i < sortedChildren.size(); i++)
         {
-            splitNode.aabb =
-                AABB::combine(splitNode.aabb, sortedChildren[i].aabb);
+            splitNode.aabb = AABB::combine(splitNode.aabb, sortedChildren[i].aabb);
             splitBranch->add(std::move(sortedChildren[i]));
         }
         for (int i = RST::m; i < until + 1; i++)
@@ -507,9 +474,7 @@ RSTNode RSTNode::split(RSTNode&& newNode)
             }
             float overlap = accFrontBB.overlapArea(accBackBB);
             float area = accFrontBB.area() + accBackBB.area();
-            if (overlap <
-                minOverlap ||
-                (overlap == minOverlap && area < minArea))
+            if (overlap < minOverlap || (overlap == minOverlap && area < minArea))
             {
                 bestIndex = i;
                 minOverlap = overlap;
@@ -523,8 +488,7 @@ RSTNode RSTNode::split(RSTNode&& newNode)
         }
         for (int i = bestIndex; i < until; i++)
         {
-            splitNode.aabb =
-                AABB::combine(splitNode.aabb, sortedChildren[i].aabb);
+            splitNode.aabb = AABB::combine(splitNode.aabb, sortedChildren[i].aabb);
             splitBranch->add(std::move(sortedChildren[i]));
         }
     }
@@ -589,10 +553,7 @@ bool RST::condenseTree(RSTNode* node, int index, int8_t level)
     }
 }
 
-bool RST::findLeafAndRemove(RSTNode* node,
-                            RSTLeaf* leaf,
-                            AABB&& aabb,
-                            int8_t level)
+bool RST::findLeafAndRemove(RSTNode* node, RSTLeaf* leaf, AABB&& aabb, int8_t level)
 {
     RSTBranch* branch = static_cast<RSTBranch*>(node->data);
     if (level == RST::depth)
@@ -606,8 +567,7 @@ bool RST::findLeafAndRemove(RSTNode* node,
     for (int i = 0; i < branch->n; i++)
     {
         RSTNode* child = branch->at(i);
-        if (child->aabb.intersects(aabb) &&
-            findLeafAndRemove(child, leaf, std::move(aabb), level + 1))
+        if (child->aabb.intersects(aabb) && findLeafAndRemove(child, leaf, std::move(aabb), level + 1))
             return condenseTree(node, i, level);
     }
     return false;
@@ -645,9 +605,7 @@ int RSTNode::chooseSubtree(const AABB& aabb, int8_t level)
         }
         if (tempOverlapIncrease <
             minOverlapIncrease ||
-            ((tempOverlapIncrease ==
-              minOverlapIncrease &&
-              tempEnlargement < minEnlargement) ||
+            ((tempOverlapIncrease == minOverlapIncrease && tempEnlargement < minEnlargement) ||
              (tempEnlargement == minEnlargement && tempArea < minArea)))
         {
             index = i;
@@ -674,8 +632,7 @@ std::vector<std::pair<AABB, int8_t>> RSTNode::collect(int8_t level) const
     std::vector<std::pair<AABB, int8_t>> acc;
     for (int i = 0; i < branch->n; i++)
     {
-        std::vector<std::pair<AABB, int8_t>> childAABBs =
-            branch->children[i].collect(level + 1);
+        std::vector<std::pair<AABB, int8_t>> childAABBs = branch->children[i].collect(level + 1);
         acc.insert(acc.end(), childAABBs.begin(), childAABBs.end());
     }
     acc.push_back({aabb, level});

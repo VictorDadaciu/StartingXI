@@ -18,8 +18,8 @@
 const std::string BASE_PATH = "/home/victordadaciu/workspace/StartingXI/MysteriousGame/";
 const std::string MODELS_PATH = BASE_PATH + "models/";
 const std::string TEXTURES_PATH = BASE_PATH + "textures/";
-const std::string SHADERS_PATH = BASE_PATH + "shaders/";
-const std::string SHADERS_GEN_PATH = SHADERS_PATH + "generated/";
+const std::string SHADERS_GEN_PATH =
+    "/home/victordadaciu/workspace/StartingXI/SXIRenderer/resources/shaders/generated/";
 
 constexpr uint32_t frameThreshold = 200;
 
@@ -75,7 +75,7 @@ static void loop()
 {
     SDL_Event e;
     SDL_zero(e);
-    bool minimized = false;
+    // bool minimized = false;
     bool running = true;
     sxi::TimePoint timeAtStart = timer.time;
     while (running)
@@ -83,15 +83,15 @@ static void loop()
         sdlTimer.refresh();
         while (SDL_PollEvent(&e))
         {
-            if (e.type == SDL_EVENT_WINDOW_MINIMIZED)
-            {
-                minimized = true;
-            }
+            // if (e.type == SDL_EVENT_WINDOW_MINIMIZED)
+            // {
+            //     minimized = true;
+            // }
 
-            if (e.type == SDL_EVENT_WINDOW_RESTORED)
-            {
-                minimized = false;
-            }
+            // if (e.type == SDL_EVENT_WINDOW_RESTORED)
+            // {
+            //     minimized = false;
+            // }
 
             if (e.type == SDL_EVENT_QUIT)
             {

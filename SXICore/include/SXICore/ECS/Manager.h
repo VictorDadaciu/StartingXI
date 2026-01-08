@@ -149,7 +149,7 @@ public:
         static_assert(Settings::template isSignature<TSignature>(), "TSignature is not a signature");
 
         mpl::forTuple(
-            [this, &func, start, end](auto& as)
+            [&func, start, end](auto& as)
             {
                 as.template forComponents<TSignature>(func, start, end);
             },

@@ -16,3 +16,9 @@ add_library(${PROJECT_NAME} STATIC
 target_link_libraries(${PROJECT_NAME} glm::glm)
 target_include_directories(${PROJECT_NAME} PRIVATE include/${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PUBLIC glm)
+
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall)
+endif()

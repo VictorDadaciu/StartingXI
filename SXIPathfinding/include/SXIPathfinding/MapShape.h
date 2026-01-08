@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RStarTree.h"
+#include "RST.h"
 #include "SXIMath/Vec.h"
 
 #include <vector>

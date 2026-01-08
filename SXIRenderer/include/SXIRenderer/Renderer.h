@@ -137,12 +137,12 @@ void render(ecs::Manager<TSettings>& mgr, const Time& time, size_t start, size_t
     vkWaitForFences(detail::context->logicalDevice, 1, &frameContext->inFlightFence, VK_TRUE, UINT64_MAX);
 
     u32 imageIndex;
-    VkResult result = vkAcquireNextImageKHR(detail::context->logicalDevice,
-                                            detail::window->swapchain->swapchain,
-                                            UINT64_MAX,
-                                            frameContext->imageAvailableSemaphore,
-                                            VK_NULL_HANDLE,
-                                            &imageIndex);
+    vkAcquireNextImageKHR(detail::context->logicalDevice,
+                          detail::window->swapchain->swapchain,
+                          UINT64_MAX,
+                          frameContext->imageAvailableSemaphore,
+                          VK_NULL_HANDLE,
+                          &imageIndex);
 
     vkResetFences(detail::context->logicalDevice, 1, &frameContext->inFlightFence);
 
@@ -160,9 +160,6 @@ void render(ecs::Manager<TSettings>& mgr, const Time& time, size_t start, size_t
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &frameContext->commandBuffer;
-
-    VkSemaphore signalSemaphores[] = {detail::window->swapchain->renderFinishedSemaphores[imageIndex],
-                                      detail::window->swapchain->timelineSemaphores[imageIndex]};
 
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = &detail::window->swapchain->renderFinishedSemaphores[imageIndex];
